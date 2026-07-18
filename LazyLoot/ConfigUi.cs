@@ -1,4 +1,4 @@
-using Dalamud.Bindings.ImGui;
+using ImGuiNET;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Textures;
@@ -184,7 +184,7 @@ public class ConfigUi : Window, IDisposable
     private static void DrawFeatures()
     {
         ImGuiEx.LineCentered("FeaturesLabel", () => ImGuiEx.TextUnderlined("LazyLoot Rolling Commands"));
-        ImGui.Columns(2, ImU8String.Empty, false);
+        ImGui.Columns(2, null, false);
         ImGui.SetColumnWidth(0, 80);
         ImGui.Text("/lazy need");
         ImGui.NextColumn();
@@ -364,7 +364,7 @@ public class ConfigUi : Window, IDisposable
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (ImGui.GetColumnWidth() - ImGui.GetFrameHeight()) * 0.5f);
     }
 
-    private static ImTextureID GetDutyIcon(ContentFinderCondition duty)
+    private static nint GetDutyIcon(ContentFinderCondition duty)
     {
         var icon = duty is { HighEndDuty: true, ContentType.Value.RowId: 5 }
             ? Svc.Data.GetExcelSheet<ContentType>()
@@ -376,7 +376,7 @@ public class ConfigUi : Window, IDisposable
         }
 
         var itemIcon = GetItemIcon(icon);
-        return itemIcon?.Handle ?? default;
+        return itemIcon?.ImGuiHandle ?? default;
     }
 
     private static void DrawUserRestrictionItems()
@@ -443,7 +443,7 @@ public class ConfigUi : Window, IDisposable
 
                     var icon = GetItemIcon(restrictedItem.Icon);
                     if (icon != null)
-                        ImGui.Image(icon.Handle, new Vector2(24, 24));
+                        ImGui.Image(icon.ImGuiHandle, new Vector2(24, 24));
                     else
                         ImGui.Text("-");
 
@@ -551,7 +551,7 @@ public class ConfigUi : Window, IDisposable
                 var icon = GetItemIcon(item.Icon);
                 if (icon != null)
                 {
-                    ImGui.Image(icon.Handle, new Vector2(16, 16));
+                    ImGui.Image(icon.ImGuiHandle, new Vector2(16, 16));
                     ImGui.SameLine();
                 }
                 if (ImGui.IsItemHovered())
@@ -940,7 +940,7 @@ public class ConfigUi : Window, IDisposable
         ImGui.TextWrapped(
             "Fancy Ultimate Lazy Feature (FULF) is a set and forget feature that will automatically roll on items for you instead of having to use the commands above.");
         ImGui.Separator();
-        ImGui.Columns(2, ImU8String.Empty, false);
+        ImGui.Columns(2, null, false);
         ImGui.SetColumnWidth(0, 80);
         ImGui.Text("/fulf need");
         ImGui.NextColumn();

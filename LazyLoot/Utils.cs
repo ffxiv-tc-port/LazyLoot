@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using Dalamud.Bindings.ImGui;
+using ImGuiNET;
 using Dalamud.Interface.Utility;
 using ECommons.ImGuiMethods;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
@@ -115,7 +115,7 @@ internal static class Utils
             state.FocusOnOpen = false;
         }
         
-        ImGui.InputText("##popupListSearch", ref state.Query, inputMaxLength);
+        ImGui.InputText("##popupListSearch", ref state.Query, (uint)inputMaxLength);
         ImGui.Dummy(new Vector2(0, 4));
 
         var childSize = listSize ?? new Vector2(width, 200);

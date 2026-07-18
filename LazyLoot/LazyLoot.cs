@@ -1,5 +1,4 @@
-﻿using Dalamud.Game.Chat;
-using Dalamud.Game.ClientState.Conditions;
+﻿using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.Dtr;
 using Dalamud.Game.Text;
@@ -80,24 +79,13 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         Svc.Framework.Update += OnFrameworkUpdate;
     }
 
-    private static void OnDtrClick(DtrInteractionEvent ev)
+    // NOTE: TC's Dalamud IDtrBarEntry.OnClick is a plain Action (no modifier-key/click-type
+    // info), unlike the newer DtrInteractionEvent-based API. Left/right-click cycling and
+    // ctrl-click distinction aren't available in this API generation, so this always just
+    // opens the config UI.
+    private static void OnDtrClick()
     {
-        if (ev.ModifierKeys.HasFlag(ClickModifierKeys.Ctrl))
-        {
-            _configUi.IsOpen = true;
-            return;
-        }
-
-        switch (ev.ClickType)
-        {
-            case MouseClickType.Left:
-                CycleFulf(true);
-                break;
-
-            case MouseClickType.Right:
-                CycleFulf(false);
-                break;
-        }
+        _configUi.IsOpen = true;
     }
 
     private void LazyCommand(string command, string arguments)
@@ -345,14 +333,14 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         }
     }
 
-    private void NoticeLoot(IHandleableChatMessage handler)
+    private void NoticeLoot(XivChatType type, int timestamp, ref Dalamud.Game.Text.SeStringHandling.SeString sender, ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled)
     {
-        Svc.Log.Debug($"{handler.LogKind} {handler.Message}");
-        if (!Config.FulfEnabled || handler.LogKind != XivChatType.SystemMessage) return;
+        Svc.Log.Debug($"{type} {message}");
+        if (!Config.FulfEnabled || type != XivChatType.SystemMessage) return;
         // do a few checks to see if the message is the weekly lockout message the game sends
-        if (CheckAndUpdateWeeklyLockoutDutyFlag(handler.Message)) return;
+        if (CheckAndUpdateWeeklyLockoutDutyFlag(message)) return;
         // if not Cast your lot, then just ignore
-        if (handler.Message.TextValue != Svc.Data.GetExcelSheet<LogMessage>().First(x => x.RowId == CastYourLotMessage).Text) return;
+        if (message.TextValue != Svc.Data.GetExcelSheet<LogMessage>().First(x => x.RowId == CastYourLotMessage).Text) return;
         _nextRollTime = DateTime.Now.AddMilliseconds(new Random()
             .Next((int)(Config.FulfMinRollDelayInSeconds * 1000),
                 (int)(Config.FulfMaxRollDelayInSeconds * 1000)));
@@ -384,7 +372,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         return true;
     }
 
-    private static void OnTerritoryChanged(uint territoryId)
+    private static void OnTerritoryChanged(ushort territoryId)
     {
         if (!IsHighEndDutyTerritory(territoryId))
         {
