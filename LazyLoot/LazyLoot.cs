@@ -297,19 +297,19 @@ public class LazyLoot : IDalamudPlugin, IDisposable
     {
         SeString seString = new(new List<Payload>()
         {
-            new TextPayload("Need "),
+            new TextPayload("需要 "),
             new UIForegroundPayload(575),
             new TextPayload(need.ToString()),
             new UIForegroundPayload(0),
-            new TextPayload(" item" + (need == 1 ? "" : "s") + ", greed "),
+            new TextPayload(" 件道具，貪要 "),
             new UIForegroundPayload(575),
             new TextPayload(greed.ToString()),
             new UIForegroundPayload(0),
-            new TextPayload(" item" + (greed == 1 ? "" : "s") + ", pass "),
+            new TextPayload(" 件道具，放棄 "),
             new UIForegroundPayload(575),
             new TextPayload(pass.ToString()),
             new UIForegroundPayload(0),
-            new TextPayload(" item" + (pass == 1 ? "" : "s") + ".")
+            new TextPayload(" 件道具。")
         });
 
         if (Config.EnableChatLogMessage)
