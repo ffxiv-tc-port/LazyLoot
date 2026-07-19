@@ -1,8 +1,8 @@
 {
-  "Author": "53m1k0l0n/Gidedin (Puni.sh)",
+  "Author": "53m1k0l0n/Gidedin (Puni.sh), Lother",
   "Name": "LazyLoot",
-  "Punchline": "Dungeon Loot but Lazy.",
-  "Description": "Roll command with various arguments need | needonly | greed | pass | passall. \nChat and Toast output and delay for rolling.",
+  "Punchline": "打怪但懶得選骰的擲骰外掛。",
+  "Description": "以指令執行擲骰，支援 need | needonly | greed | pass | passall 等各種參數。\n可設定聊天與跳出訊息輸出，以及擲骰延遲。",
   "Tags": [
     "plugin",
     "loot",
@@ -10,9 +10,9 @@
     "other"
   ],
   "CategoryTags": null,
-  "RepoUrl": "https://github.com/PunishXIV/LazyLoot",
+  "RepoUrl": "https://github.com/Lother/LazyLoot",
   "ImageUrls": null,
-  "IconUrl": "https://love.puni.sh/resources/lazyloot.png",
+  "IconUrl": "https://raw.githubusercontent.com/Lother/DalamudPluginsTC/main/icons/LazyLoot.png",
   "DalamudAPILevel": 15,
   "ChangeLog": "- 7.5"
 }
