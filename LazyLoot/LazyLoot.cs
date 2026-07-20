@@ -173,7 +173,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
         Svc.PluginInterface.UiBuilder.OpenMainUi -= OnOpenConfigUi;
         Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
-        Svc.Chat.CheckMessageHandled -= NoticeLoot;
+        Svc.Chat.ChatMessage -= NoticeLoot;
         Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
 
         Svc.Commands.RemoveHandler("/lazyloot");
@@ -336,7 +336,12 @@ public class LazyLoot : IDalamudPlugin, IDisposable
     private void NoticeLoot(XivChatType type, int timestamp, ref Dalamud.Game.Text.SeStringHandling.SeString sender, ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled)
     {
         Svc.Log.Debug($"{type} {message}");
-        if (!Config.FulfEnabled || type != XivChatType.SystemMessage) return;
+        // TC note: the "cast your lot" roll prompt arrives as a different, undocumented
+        // chat type on TC (observed as raw type 2105 in logs, not XivChatType.SystemMessage
+        // like on global) - matching purely on chat type silently dropped every roll prompt
+        // and LazyLoot never auto-rolled. The message-text comparison below is unique enough
+        // on its own, so the chat-type gate is dropped rather than hardcoding TC's type value.
+        if (!Config.FulfEnabled) return;
         // do a few checks to see if the message is the weekly lockout message the game sends
         if (CheckAndUpdateWeeklyLockoutDutyFlag(message)) return;
         // if not Cast your lot, then just ignore
