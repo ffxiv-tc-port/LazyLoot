@@ -241,20 +241,20 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         {
             dtrText = Config.FulfRoll switch
             {
-                0 => "Needing",
-                1 => "Greeding",
-                2 => "Passing",
+                0 => "需要",
+                1 => "貪要",
+                2 => "放棄",
                 _ => throw new ArgumentOutOfRangeException(nameof(Config.FulfRoll)),
             };
         }
         else
         {
-            dtrText = "FULF Disabled";
+            dtrText = "FULF 已停用";
         }
 
         var isWeeklyLockedDutyActive = Config is { RestrictionWeeklyLockoutItems: true, WeeklyLockoutDutyActive: true };
 
-        if (isWeeklyLockedDutyActive) dtrText += " (Disabled | WLD)";
+        if (isWeeklyLockedDutyActive) dtrText += "（已停用 | WLD）";
 
         _dtrEntry.Text = new SeString(
             new IconPayload(BitmapFontIcon.Dice),
