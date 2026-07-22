@@ -8,6 +8,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using ECommons;
 using ECommons.DalamudServices;
+using ECommons.LanguageHelpers;
 using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel.Sheets;
@@ -43,6 +44,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
     public LazyLoot(IDalamudPluginInterface pluginInterface)
     {
         ECommonsMain.Init(pluginInterface, this);
+        ECommons.LanguageHelpers.Localization.Init("ChineseTraditional");
         PunishLibMain.Init(pluginInterface, "LazyLoot", new AboutPlugin() { Developer = "53m1k0l0n/Gidedin" });
 
         Config = Svc.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -59,20 +61,20 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
         Svc.Commands.AddHandler("/lazyloot", new CommandInfo(LazyCommand)
         {
-            HelpMessage = "Open Lazy Loot config.",
+            HelpMessage = "Open Lazy Loot config.".Loc(),
             ShowInHelp = true,
         });
 
         Svc.Commands.AddHandler("/lazy", new CommandInfo(LazyCommand)
         {
-            HelpMessage = "Open Lazy Loot config by default. Add need | greed | pass to roll on current items.",
+            HelpMessage = "Open Lazy Loot config by default. Add need | greed | pass to roll on current items.".Loc(),
             ShowInHelp = true,
         });
 
         Svc.Commands.AddHandler("/fulf", new CommandInfo(FulfCommand)
         {
             HelpMessage =
-                "Enable/Disable FULF with /fulf [on|off] or change the loot rule with /fulf need | greed | pass.",
+                "Enable/Disable FULF with /fulf [on|off] or change the loot rule with /fulf need | greed | pass.".Loc(),
             ShowInHelp = true,
         });
 
@@ -241,20 +243,20 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         {
             dtrText = Config.FulfRoll switch
             {
-                0 => "需要",
-                1 => "貪要",
-                2 => "放棄",
+                0 => "Needing".Loc(),
+                1 => "Greeding".Loc(),
+                2 => "Passing".Loc(),
                 _ => throw new ArgumentOutOfRangeException(nameof(Config.FulfRoll)),
             };
         }
         else
         {
-            dtrText = "FULF 已停用";
+            dtrText = "FULF Disabled".Loc();
         }
 
         var isWeeklyLockedDutyActive = Config is { RestrictionWeeklyLockoutItems: true, WeeklyLockoutDutyActive: true };
 
-        if (isWeeklyLockedDutyActive) dtrText += "（已停用 | WLD）";
+        if (isWeeklyLockedDutyActive) dtrText += " (Disabled | WLD)".Loc();
 
         _dtrEntry.Text = new SeString(
             new IconPayload(BitmapFontIcon.Dice),
@@ -297,19 +299,19 @@ public class LazyLoot : IDalamudPlugin, IDisposable
     {
         SeString seString = new(new List<Payload>()
         {
-            new TextPayload("需要 "),
+            new TextPayload("Need ".Loc()),
             new UIForegroundPayload(575),
             new TextPayload(need.ToString()),
             new UIForegroundPayload(0),
-            new TextPayload(" 件道具，貪要 "),
+            new TextPayload((" item" + (need == 1 ? "" : "s") + ", greed ").Loc()),
             new UIForegroundPayload(575),
             new TextPayload(greed.ToString()),
             new UIForegroundPayload(0),
-            new TextPayload(" 件道具，放棄 "),
+            new TextPayload((" item" + (greed == 1 ? "" : "s") + ", pass ").Loc()),
             new UIForegroundPayload(575),
             new TextPayload(pass.ToString()),
             new UIForegroundPayload(0),
-            new TextPayload(" 件道具。")
+            new TextPayload((" item" + (pass == 1 ? "" : "s") + ".").Loc())
         });
 
         if (Config.EnableChatLogMessage)
