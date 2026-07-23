@@ -31,7 +31,7 @@
 		<RootNamespace>LazyLoot</RootNamespace>
 		<PackageId>LazyLoot</PackageId>
 		<Product>LazyLoot</Product>
-		<TargetFramework>net10.0-windows7.0</TargetFramework>
+		<TargetFramework>net9.0-windows7.0</TargetFramework>
 	</PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -63,7 +63,7 @@
 	
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="14.0.2" />
-		<PackageReference Include="ECommons" Version="3.2.0" />
+		<PackageReference Include="ECommons" Version="3.0.1.10" />
 		<PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
 		<ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj" />
 		<Reference Include="FFXIVClientStructs">

@@ -230,7 +230,7 @@ internal static class Roller
 
             if (ShouldPassUnlockable(LazyLoot.Config.RestrictionIgnoreMounts,
                     LazyLoot.Config.RestrictionMountsOnlyUntradeables, lootItem) &&
-                lootItem.Value.ItemAction.Value.Action.Value.RowId == 1322)
+                lootItem.Value.ItemAction.Value.Type == 1322)
             {
                 if (LazyLoot.Config.DiagnosticsMode)
                     DuoLog.Debug(
@@ -240,7 +240,7 @@ internal static class Roller
 
             if (ShouldPassUnlockable(LazyLoot.Config.RestrictionIgnoreMinions,
                     LazyLoot.Config.RestrictionMinionsOnlyUntradeables, lootItem) &&
-                lootItem.Value.ItemAction.Value.Action.Value.RowId == 853)
+                lootItem.Value.ItemAction.Value.Type == 853)
             {
                 if (LazyLoot.Config.DiagnosticsMode)
                     DuoLog.Debug(
@@ -250,7 +250,7 @@ internal static class Roller
 
             if (ShouldPassUnlockable(LazyLoot.Config.RestrictionIgnoreBardings,
                     LazyLoot.Config.RestrictionBardingsOnlyUntradeables, lootItem) &&
-                lootItem.Value.ItemAction.Value.Action.Value.RowId == 1013)
+                lootItem.Value.ItemAction.Value.Type == 1013)
             {
                 if (LazyLoot.Config.DiagnosticsMode)
                     DuoLog.Debug(
@@ -260,7 +260,7 @@ internal static class Roller
 
             if (ShouldPassUnlockable(LazyLoot.Config.RestrictionIgnoreEmoteHairstyle,
                     LazyLoot.Config.RestrictionEmoteHairstyleOnlyUntradeables, lootItem) &&
-                lootItem.Value.ItemAction.Value.Action.Value.RowId == 2633)
+                lootItem.Value.ItemAction.Value.Type == 2633)
             {
                 if (LazyLoot.Config.DiagnosticsMode)
                     DuoLog.Debug(
@@ -270,7 +270,7 @@ internal static class Roller
 
             if (ShouldPassUnlockable(LazyLoot.Config.RestrictionIgnoreTripleTriadCards,
                     LazyLoot.Config.RestrictionTripleTriadCardsOnlyUntradeables, lootItem) &&
-                lootItem.Value.ItemAction.Value.Action.Value.RowId == 3357)
+                lootItem.Value.ItemAction.Value.Type == 3357)
             {
                 if (LazyLoot.Config.DiagnosticsMode)
                     DuoLog.Debug(
@@ -280,7 +280,7 @@ internal static class Roller
 
             if (ShouldPassUnlockable(LazyLoot.Config.RestrictionIgnoreOrchestrionRolls,
                     LazyLoot.Config.RestrictionOrchestrionRollsOnlyUntradeables, lootItem) &&
-                lootItem.Value.ItemAction.Value.Action.Value.RowId == 25183)
+                lootItem.Value.ItemAction.Value.Type == 25183)
             {
                 if (LazyLoot.Config.DiagnosticsMode)
                     DuoLog.Debug(
@@ -369,7 +369,7 @@ internal static class Roller
             }
         }
 
-        if (LazyLoot.Config.RestrictionOtherJobItems && lootItem.Value.ItemAction.Value.Action.Value.RowId == 29153 &&
+        if (LazyLoot.Config.RestrictionOtherJobItems && lootItem.Value.ItemAction.Value.Type == 29153 &&
             Player.Object?.ClassJob.RowId is not (1 or 19))
         {
             DuoLog.Debug(

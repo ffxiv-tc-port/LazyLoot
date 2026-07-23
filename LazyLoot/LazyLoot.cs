@@ -1,5 +1,4 @@
-﻿using Dalamud.Game.Chat;
-using Dalamud.Game.ClientState.Conditions;
+﻿using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.Dtr;
 using Dalamud.Game.Text;
@@ -347,9 +346,9 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         }
     }
 
-    private void NoticeLoot(IHandleableChatMessage handler)
+    private void NoticeLoot(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {
-        Svc.Log.Debug($"{handler.LogKind} {handler.Message}");
+        Svc.Log.Debug($"{type} {message}");
         // TC note: the "cast your lot" roll prompt arrives as a different, undocumented
         // chat type on TC (observed as raw type 2105 in logs, not XivChatType.SystemMessage
         // like on global) - matching purely on chat type silently dropped every roll prompt
@@ -357,9 +356,9 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         // on its own, so the chat-type gate is dropped rather than hardcoding TC's type value.
         if (!Config.FulfEnabled) return;
         // do a few checks to see if the message is the weekly lockout message the game sends
-        if (CheckAndUpdateWeeklyLockoutDutyFlag(handler.Message)) return;
+        if (CheckAndUpdateWeeklyLockoutDutyFlag(message)) return;
         // if not Cast your lot, then just ignore
-        if (handler.Message.TextValue != Svc.Data.GetExcelSheet<LogMessage>().First(x => x.RowId == CastYourLotMessage).Text) return;
+        if (message.TextValue != Svc.Data.GetExcelSheet<LogMessage>().First(x => x.RowId == CastYourLotMessage).Text) return;
         _nextRollTime = DateTime.Now.AddMilliseconds(new Random()
             .Next((int)(Config.FulfMinRollDelayInSeconds * 1000),
                 (int)(Config.FulfMaxRollDelayInSeconds * 1000)));
@@ -391,7 +390,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         return true;
     }
 
-    private static void OnTerritoryChanged(uint territoryId)
+    private static void OnTerritoryChanged(ushort territoryId)
     {
         if (!IsHighEndDutyTerritory(territoryId))
         {
