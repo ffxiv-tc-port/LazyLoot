@@ -1,4 +1,5 @@
-﻿using Dalamud.Game.ClientState.Conditions;
+﻿using Dalamud.Game.Chat;
+using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.Dtr;
 using Dalamud.Game.Text;
@@ -81,13 +82,24 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         Svc.Framework.Update += OnFrameworkUpdate;
     }
 
-    // NOTE: TC's Dalamud IDtrBarEntry.OnClick is a plain Action (no modifier-key/click-type
-    // info), unlike the newer DtrInteractionEvent-based API. Left/right-click cycling and
-    // ctrl-click distinction aren't available in this API generation, so this always just
-    // opens the config UI.
-    private static void OnDtrClick()
+    private static void OnDtrClick(DtrInteractionEvent ev)
     {
-        _configUi.IsOpen = true;
+        if (ev.ModifierKeys.HasFlag(ClickModifierKeys.Ctrl))
+        {
+            _configUi.IsOpen = true;
+            return;
+        }
+
+        switch (ev.ClickType)
+        {
+            case MouseClickType.Left:
+                CycleFulf(true);
+                break;
+
+            case MouseClickType.Right:
+                CycleFulf(false);
+                break;
+        }
     }
 
     private void LazyCommand(string command, string arguments)
@@ -335,9 +347,9 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         }
     }
 
-    private void NoticeLoot(XivChatType type, int timestamp, ref Dalamud.Game.Text.SeStringHandling.SeString sender, ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled)
+    private void NoticeLoot(IHandleableChatMessage handler)
     {
-        Svc.Log.Debug($"{type} {message}");
+        Svc.Log.Debug($"{handler.LogKind} {handler.Message}");
         // TC note: the "cast your lot" roll prompt arrives as a different, undocumented
         // chat type on TC (observed as raw type 2105 in logs, not XivChatType.SystemMessage
         // like on global) - matching purely on chat type silently dropped every roll prompt
@@ -345,9 +357,9 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         // on its own, so the chat-type gate is dropped rather than hardcoding TC's type value.
         if (!Config.FulfEnabled) return;
         // do a few checks to see if the message is the weekly lockout message the game sends
-        if (CheckAndUpdateWeeklyLockoutDutyFlag(message)) return;
+        if (CheckAndUpdateWeeklyLockoutDutyFlag(handler.Message)) return;
         // if not Cast your lot, then just ignore
-        if (message.TextValue != Svc.Data.GetExcelSheet<LogMessage>().First(x => x.RowId == CastYourLotMessage).Text) return;
+        if (handler.Message.TextValue != Svc.Data.GetExcelSheet<LogMessage>().First(x => x.RowId == CastYourLotMessage).Text) return;
         _nextRollTime = DateTime.Now.AddMilliseconds(new Random()
             .Next((int)(Config.FulfMinRollDelayInSeconds * 1000),
                 (int)(Config.FulfMaxRollDelayInSeconds * 1000)));
@@ -379,7 +391,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         return true;
     }
 
-    private static void OnTerritoryChanged(ushort territoryId)
+    private static void OnTerritoryChanged(uint territoryId)
     {
         if (!IsHighEndDutyTerritory(territoryId))
         {
