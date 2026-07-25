@@ -1,5 +1,5 @@
 {
-  "Author": "53m1k0l0n/Gidedin (Puni.sh), Lother",
+  "Author": "53m1k0l0n/Gidedin (Puni.sh)",
   "Name": "LazyLoot",
   "Punchline": "打怪但懶得選骰的擲骰插件。",
   "Description": "以指令執行擲骰，支援 need | needonly | greed | pass | passall 等各種參數。\n可設定聊天與跳出訊息輸出，以及擲骰延遲。",
