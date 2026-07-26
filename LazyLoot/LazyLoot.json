@@ -10,9 +10,9 @@
     "other"
   ],
   "CategoryTags": null,
-  "RepoUrl": "https://github.com/Lother/LazyLoot",
+  "RepoUrl": "https://github.com/ffxiv-tc-port/LazyLoot",
   "ImageUrls": null,
-  "IconUrl": "https://raw.githubusercontent.com/Lother/DalamudPluginsTC/main/icons/LazyLoot.png",
+  "IconUrl": "https://raw.githubusercontent.com/ffxiv-tc-port/DalamudPluginsTC/main/icons/LazyLoot.png",
   "DalamudAPILevel": 15,
   "ChangeLog": "- 7.5"
 }
