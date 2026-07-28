@@ -13,6 +13,6 @@
   "RepoUrl": "https://github.com/ffxiv-tc-port/LazyLoot",
   "ImageUrls": null,
   "IconUrl": "https://raw.githubusercontent.com/ffxiv-tc-port/DalamudPluginsTC/main/icons/LazyLoot.png",
-  "DalamudAPILevel": 15,
+  "DalamudApiLevel": 13,
   "ChangeLog": "- 7.5"
 }
