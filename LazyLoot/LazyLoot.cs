@@ -81,13 +81,24 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         Svc.Framework.Update += OnFrameworkUpdate;
     }
 
-    // NOTE: TC's Dalamud IDtrBarEntry.OnClick is a plain Action (no modifier-key/click-type
-    // info), unlike the newer DtrInteractionEvent-based API. Left/right-click cycling and
-    // ctrl-click distinction aren't available in this API generation, so this always just
-    // opens the config UI.
-    private static void OnDtrClick()
+    private static void OnDtrClick(DtrInteractionEvent ev)
     {
-        _configUi.IsOpen = true;
+        if (ev.ModifierKeys.HasFlag(ClickModifierKeys.Ctrl))
+        {
+            _configUi.IsOpen = true;
+            return;
+        }
+
+        switch (ev.ClickType)
+        {
+            case MouseClickType.Left:
+                CycleFulf(true);
+                break;
+
+            case MouseClickType.Right:
+                CycleFulf(false);
+                break;
+        }
     }
 
     private void LazyCommand(string command, string arguments)
@@ -335,7 +346,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         }
     }
 
-    private void NoticeLoot(XivChatType type, int timestamp, ref Dalamud.Game.Text.SeStringHandling.SeString sender, ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled)
+    private void NoticeLoot(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {
         Svc.Log.Debug($"{type} {message}");
         // TC note: the "cast your lot" roll prompt arrives as a different, undocumented

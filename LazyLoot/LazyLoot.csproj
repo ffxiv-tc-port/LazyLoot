@@ -63,7 +63,7 @@
 	
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="14.0.2" />
-		<PackageReference Include="ECommons" Version="3.0.0.8" />
+		<PackageReference Include="ECommons" Version="3.0.1.10" />
 		<PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
 		<ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj" />
 		<Reference Include="FFXIVClientStructs">
@@ -80,7 +80,7 @@
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="ImGui.NET">
-			<HintPath>$(DalamudLibPath)ImGui.NET.dll</HintPath>
+			<HintPath>$(DalamudLibPath)Dalamud.Bindings.ImGui.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="ImGuiScene">
