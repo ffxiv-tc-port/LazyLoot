@@ -276,6 +276,15 @@ public class LazyLoot : IDalamudPlugin, IDisposable
             new IconPayload(BitmapFontIcon.Dice),
             new TextPayload(dtrText));
 
+        // 這一格原本完全沒有提示，滑鼠移上去什麼都不會出現。
+        // ⚠️ 右鍵是「反向切換規則」而不是開視窗（其他外掛的右鍵才是開關視窗），
+        // 所以提示必須把這個差異講清楚，否則使用者會以為是壞的。
+        _dtrEntry.Tooltip = new SeString(new TextPayload(
+            $"LazyLoot — 自動拾取\n目前：{dtrText}\n\n"
+            + "左鍵：切換到下一個規則\n"
+            + "右鍵：切換到上一個規則\n"
+            + "Ctrl+點擊：開啟／關閉設定視窗"));
+
         _dtrEntry.Shown = Config.ShowDtrEntry;
 
         if (isWeeklyLockedDutyActive) return;
