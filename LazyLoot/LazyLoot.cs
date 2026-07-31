@@ -83,9 +83,12 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
     private static void OnDtrClick(DtrInteractionEvent ev)
     {
+        // ⚠️ 這個外掛的右鍵已經有用途（反向切換拾取規則），所以「開關視窗」維持在 Ctrl+點擊，
+        // 不像其他外掛那樣綁右鍵 —— 把一個能用的功能換掉，比少一個捷徑糟。
+        // 由「只開啟」改成「開關」：再按一次會關掉。
         if (ev.ModifierKeys.HasFlag(ClickModifierKeys.Ctrl))
         {
-            _configUi.IsOpen = true;
+            _configUi.IsOpen ^= true;
             return;
         }
 
