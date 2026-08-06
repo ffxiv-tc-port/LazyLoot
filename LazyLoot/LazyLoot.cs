@@ -252,25 +252,33 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
     private static void OnFrameworkUpdate(IFramework framework)
     {
-        string dtrText;
+        // DTR 這一格的版面預算只有一個字：列上只放「現在會怎麼骰」，
+        // 完整模式名稱與點擊操作一律進 tooltip。
+        // ⚠️ 這幾個字刻意寫死中文而不走 .Loc()：這個 fork 在建構式裡固定
+        //    Localization.Init("ChineseTraditional") 且沒有語言選單，
+        //    寫死才能在同一行看出「哪個字對哪個狀態」——對錯會害使用者骰錯東西。
+        var isWeeklyLockedDutyActive = Config is { RestrictionWeeklyLockoutItems: true, WeeklyLockoutDutyActive: true };
+
+        string modeShort, modeFull;
         if (Config.FulfEnabled)
         {
-            dtrText = Config.FulfRoll switch
+            (modeShort, modeFull) = Config.FulfRoll switch
             {
-                0 => "Needing".Loc(),
-                1 => "Greeding".Loc(),
-                2 => "Passing".Loc(),
+                0 => ("需", "需求（Need）"),
+                1 => ("貪", "貪婪（Greed）"),
+                2 => ("跳", "放棄（Pass）"),
                 _ => throw new ArgumentOutOfRangeException(nameof(Config.FulfRoll)),
             };
         }
         else
         {
-            dtrText = "FULF Disabled".Loc();
+            (modeShort, modeFull) = ("停", "已停用（不會自動擲骰）");
         }
 
-        var isWeeklyLockedDutyActive = Config is { RestrictionWeeklyLockoutItems: true, WeeklyLockoutDutyActive: true };
-
-        if (isWeeklyLockedDutyActive) dtrText += " (Disabled | WLD)".Loc();
+        // 週限任務暫停時原本是在模式後面接一長串「（已停用 | WLD）」。
+        // ⚠️ 這個狀態不能只藏進 tooltip —— 列上還顯示「需」但其實一顆都不會骰，
+        //    比顯示錯的資訊更糟。改成整格換成「鎖」，維持單字寬度又能一眼看出被暫停。
+        var dtrText = isWeeklyLockedDutyActive ? "鎖" : modeShort;
 
         _dtrEntry.Text = new SeString(
             new IconPayload(BitmapFontIcon.Dice),
@@ -280,7 +288,9 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         // ⚠️ 右鍵是「反向切換規則」而不是開視窗（其他外掛的右鍵才是開關視窗），
         // 所以提示必須把這個差異講清楚，否則使用者會以為是壞的。
         _dtrEntry.Tooltip = new SeString(new TextPayload(
-            $"LazyLoot — 自動拾取\n目前：{dtrText}\n\n"
+            $"LazyLoot 自動擲骰\n目前：{modeFull}\n"
+            + (isWeeklyLockedDutyActive ? "鎖：本週次數上限任務中，擲骰暫停\n" : "")
+            + "\n需：需求／貪：貪婪／跳：放棄／停：停用\n\n"
             + "左鍵：切換到下一個規則\n"
             + "右鍵：切換到上一個規則\n"
             + "Ctrl+點擊：開啟／關閉設定視窗"));
