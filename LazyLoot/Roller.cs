@@ -138,10 +138,12 @@ internal static class Roller
         }
 
         // Here, we will check for the specific rules for the Duty.
-        var contentFinderInfo = Svc.Data.GetExcelSheet<ContentFinderCondition>()
-            .GetRow(GameMain.Instance()->CurrentContentFinderConditionId);
+        // Match on the raw id: GetRow(id).RowId is always id when the row exists, and GetRow
+        // throws ArgumentOutOfRangeException when it does not, so comparing the id directly is
+        // behaviourally identical but cannot throw on an id the current game data has no row for.
+        var currentDutyId = GameMain.Instance()->CurrentContentFinderConditionId;
         var dutyCustomRestriction =
-            LazyLoot.Config.Restrictions.Duties.FirstOrDefault(x => x.Id == contentFinderInfo.RowId);
+            LazyLoot.Config.Restrictions.Duties.FirstOrDefault(x => x.Id == currentDutyId);
         if (dutyCustomRestriction is { Enabled: true })
         {
             if (LazyLoot.Config.DiagnosticsMode)
@@ -150,13 +152,26 @@ internal static class Roller
                     dutyCustomRestriction.RollRule == RollResult.Greeded ? "greeding" :
                     dutyCustomRestriction.RollRule == RollResult.Needed ? "needing" : "passing";
                 Svc.Log.Debug(
-                    $"{lootItem.Value.Name.ToString()} is {action} due to being in {contentFinderInfo.Name}. [Duty Custom Restriction]");
+                    $"{lootItem.Value.Name.ToString()} is {action} due to being in {DutyNameForLog(currentDutyId)}. [Duty Custom Restriction]");
             }
 
             return dutyCustomRestriction.RollRule;
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Duty name for diagnostic messages only. Never throws: falls back to the raw id when the
+    /// current game data has no row for it, so a stale/unknown id degrades the log line instead
+    /// of taking down the roll.
+    /// </summary>
+    private static string DutyNameForLog(uint contentFinderConditionId)
+    {
+        return Svc.Data.GetExcelSheet<ContentFinderCondition>()
+            .TryGetRow(contentFinderConditionId, out var row)
+            ? row.Name.ToString()
+            : $"#{contentFinderConditionId}";
     }
 
     private static bool ShouldPassUnlockable(bool restriction, bool onlyUntradeable, Item? item)
@@ -435,8 +450,9 @@ internal static class Roller
             var checkWeekly = LazyLoot.Config.RestrictionWeeklyLockoutItems;
 
             var lootId = loot.ItemId;
-            var contentFinderInfo = Svc.Data.GetExcelSheet<ContentFinderCondition>()
-                .GetRow(GameMain.Instance()->CurrentContentFinderConditionId);
+            // See GetPlayerCustomRestrict: match on the raw id so an id with no row in the
+            // current game data cannot throw out of the loot loop.
+            var currentDutyId = GameMain.Instance()->CurrentContentFinderConditionId;
 
             // We load the users restrictions
             var itemCustomRestriction =
@@ -444,13 +460,13 @@ internal static class Roller
                     x.Id == lootId && x is { Enabled: true });
             var dutyCustomRestriction =
                 LazyLoot.Config.Restrictions.Duties.FirstOrDefault(x =>
-                    x.Id == contentFinderInfo.RowId && x is { Enabled: true, RollRule: RollResult.UnAwarded });
+                    x.Id == currentDutyId && x is { Enabled: true, RollRule: RollResult.UnAwarded });
 
             Item? item = null;
 
             if (LazyLoot.Config.DiagnosticsMode)
                 // Only load the item if diagnostic mode is on
-                item = Svc.Data.GetExcelSheet<Item>().GetRow(loot.ItemId);
+                item = Svc.Data.GetExcelSheet<Item>().GetRowOrDefault(loot.ItemId);
 
             if (itemCustomRestriction != null)
             {
@@ -471,7 +487,7 @@ internal static class Roller
                 {
                     if (LazyLoot.Config.DiagnosticsMode)
                         DuoLog.Debug(
-                            $"{item?.Name.ToString()} is being ignored due to being in {contentFinderInfo.Name}. [Duty Custom Restriction]");
+                            $"{item?.Name.ToString()} is being ignored due to being in {DutyNameForLog(currentDutyId)}. [Duty Custom Restriction]");
                     continue;
                 }
 

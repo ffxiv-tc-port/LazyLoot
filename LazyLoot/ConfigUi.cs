@@ -28,6 +28,14 @@ public class ConfigUi : Window, IDisposable
     private static int _debugValue;
     private readonly WindowSystem _windowSystem = new();
 
+    /// <summary>
+    /// Shown when a saved restriction points at a row the current game data has no entry for.
+    /// The row itself stays visible and greyed out so the entry can still be toggled or removed:
+    /// hiding it would silently drop a rule the user believes is active.
+    /// </summary>
+    private static string UnknownIdTooltip =>
+        "This ID does not exist in the current game data, so this rule never matches anything. It usually comes from a list exported on a different game version. Use Remove to delete it.".Loc();
+
     [StructLayout(LayoutKind.Explicit, Size = 0x40)]
     private struct DebugLootItem
     {
@@ -365,12 +373,36 @@ public class ConfigUi : Window, IDisposable
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (ImGui.GetColumnWidth() - ImGui.GetFrameHeight()) * 0.5f);
     }
 
+    /// <summary>
+    /// Ultimate duties are stored as ContentType 5 (raids) plus the HighEndDuty flag, so they are
+    /// remapped onto ContentType 28 ("Ultimate") purely for display.
+    /// <para>
+    /// RowRef.Value throws InvalidOperationException when the reference does not resolve, and this
+    /// runs on the ImGui Draw path where a single throw makes UiBuilder null the whole Draw
+    /// delegate (the plugin UI never comes back until the game restarts), so every lookup here
+    /// goes through ValueNullable/TryGetRow.
+    /// </para>
+    /// </summary>
+    private static bool TryGetDisplayContentType(ContentFinderCondition duty, out ContentType contentType)
+    {
+        var direct = duty.ContentType.ValueNullable;
+        if (duty.HighEndDuty && direct?.RowId == 5
+            && Svc.Data.GetExcelSheet<ContentType>().TryGetRow(28, out var ultimate))
+        {
+            contentType = ultimate;
+            return true;
+        }
+
+        contentType = direct ?? default;
+        return direct != null;
+    }
+
     private static ImTextureID GetDutyIcon(ContentFinderCondition duty)
     {
-        var icon = duty is { HighEndDuty: true, ContentType.Value.RowId: 5 }
-            ? Svc.Data.GetExcelSheet<ContentType>()
-                .FirstOrDefault(x => x.RowId == 28).Icon
-            : duty.ContentType.Value.Icon;
+        if (!TryGetDisplayContentType(duty, out var contentType))
+            return 0;
+
+        var icon = contentType.Icon;
         if (icon == 0)
         {
             return 0;
@@ -378,6 +410,13 @@ public class ConfigUi : Window, IDisposable
 
         var itemIcon = GetItemIcon(icon);
         return itemIcon?.Handle ?? default;
+    }
+
+    private static string GetDutyTypeName(ContentFinderCondition duty)
+    {
+        return TryGetDisplayContentType(duty, out var contentType)
+            ? contentType.Name.ToString()
+            : string.Empty;
     }
 
     private static void DrawUserRestrictionItems()
@@ -428,7 +467,9 @@ public class ConfigUi : Window, IDisposable
                 for (var i = 0; i < items.Count; i++)
                 {
                     var item = items[i];
-                    var restrictedItem = Svc.Data.GetExcelSheet<Item>().GetRow(item.Id);
+                    // TryGetRow, never GetRow: ids can arrive from an import made on another
+                    // game version, and a throw on the Draw path kills the whole plugin UI.
+                    var itemKnown = Svc.Data.GetExcelSheet<Item>().TryGetRow(item.Id, out var restrictedItem);
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
                     var enabled = item.Enabled;
@@ -442,16 +483,25 @@ public class ConfigUi : Window, IDisposable
                     ImGui.TableNextColumn();
                     CenterText();
 
-                    var icon = GetItemIcon(restrictedItem.Icon);
+                    var icon = itemKnown ? GetItemIcon(restrictedItem.Icon) : null;
                     if (icon != null)
                         ImGui.Image(icon.Handle, new Vector2(24, 24));
                     else
-                        ImGui.Text("-");
+                        ImGui.Text(itemKnown ? "-" : "?");
 
                     ImGui.TableNextColumn();
-                    ImGui.Text(restrictedItem.Name.ToString());
-                    if (ImGui.IsItemHovered())
-                        ImGui.SetTooltip(restrictedItem.Name.ToString());
+                    if (itemKnown)
+                    {
+                        ImGui.Text(restrictedItem.Name.ToString());
+                        if (ImGui.IsItemHovered())
+                            ImGui.SetTooltip(restrictedItem.Name.ToString());
+                    }
+                    else
+                    {
+                        ImGui.TextColored(ImGuiColors.DalamudGrey, "Unknown item (ID: ??)".Loc(item.Id));
+                        if (ImGui.IsItemHovered())
+                            ImGui.SetTooltip(UnknownIdTooltip);
+                    }
 
                     ImGui.TableNextColumn();
                     CenterText();
@@ -615,7 +665,10 @@ public class ConfigUi : Window, IDisposable
         bool bail = false;
         foreach (var item in _importedRestrictions)
         {
-            if (sheet.Any(x => x.RowId == item.Id)) continue;
+            // HasRow is an O(1) lookup. This runs every frame the confirmation popup is open,
+            // and the old `sheet.Any(x => x.RowId == item.Id)` was a linear scan of the whole
+            // sheet (~49k rows for Item) per imported entry per frame.
+            if (sheet.HasRow(item.Id)) continue;
             bail = true;
             Notify.Error("Imported restriction contains invalid item ID: ??. Import cancelled.".Loc(item.Id));
         }
@@ -705,7 +758,9 @@ public class ConfigUi : Window, IDisposable
                 for (var i = 0; i < duties.Count; i++)
                 {
                     var duty = duties[i];
-                    var restrictedDuty = Svc.Data.GetExcelSheet<ContentFinderCondition>().GetRow(duty.Id);
+                    // TryGetRow, never GetRow: see the item table above.
+                    var dutyKnown = Svc.Data.GetExcelSheet<ContentFinderCondition>()
+                        .TryGetRow(duty.Id, out var restrictedDuty);
                     var enabled = duty.Enabled;
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
@@ -719,17 +774,30 @@ public class ConfigUi : Window, IDisposable
                     ImGui.TableNextColumn();
                     CenterText();
 
-                    ImGui.Image(GetDutyIcon(restrictedDuty), new Vector2(24, 24));
-                    if (ImGui.IsItemHovered())
-                        ImGui.SetTooltip((restrictedDuty is { HighEndDuty: true, ContentType.Value.RowId: 5 }
-                            ? Svc.Data.GetExcelSheet<ContentType>()
-                                .FirstOrDefault(x => x.RowId == 28).Name
-                            : restrictedDuty.ContentType.Value.Name).ToString());
+                    if (dutyKnown)
+                    {
+                        ImGui.Image(GetDutyIcon(restrictedDuty), new Vector2(24, 24));
+                        if (ImGui.IsItemHovered())
+                            ImGui.SetTooltip(GetDutyTypeName(restrictedDuty));
+                    }
+                    else
+                    {
+                        ImGui.Text("?");
+                    }
 
                     ImGui.TableNextColumn();
-                    ImGui.Text(restrictedDuty.Name.ToString());
-                    if (ImGui.IsItemHovered())
-                        ImGui.SetTooltip(restrictedDuty.Name.ToString());
+                    if (dutyKnown)
+                    {
+                        ImGui.Text(restrictedDuty.Name.ToString());
+                        if (ImGui.IsItemHovered())
+                            ImGui.SetTooltip(restrictedDuty.Name.ToString());
+                    }
+                    else
+                    {
+                        ImGui.TextColored(ImGuiColors.DalamudGrey, "Unknown duty (ID: ??)".Loc(duty.Id));
+                        if (ImGui.IsItemHovered())
+                            ImGui.SetTooltip(UnknownIdTooltip);
+                    }
 
                     ImGui.TableNextColumn();
                     CenterText();
@@ -860,7 +928,10 @@ public class ConfigUi : Window, IDisposable
             {
                 if (_importedRestrictions != null)
                 {
-                    duties = _importedRestrictions;
+                    // Was `duties = _importedRestrictions;`, which only reassigned the local
+                    // captured at the top of this method: the import reported success, saved the
+                    // config and changed nothing. The item path below/above always did this right.
+                    LazyLoot.Config.Restrictions.Duties = _importedRestrictions;
                     LazyLoot.Config.Save();
                     Notify.Success("Imported Duty Restrictions successfully!".Loc());
                 }
