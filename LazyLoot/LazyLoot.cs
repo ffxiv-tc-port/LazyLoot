@@ -521,7 +521,17 @@ public class LazyLoot : IDalamudPlugin, IDisposable
             return;
         }
 
-        var item = itemSheet.GetRow(itemId);
+        // itemId 可能是使用者直接打進來的任意數字（/lazy test 999999），
+        // 裸 GetRow 查無此列時 Lumina 會擲例外並炸掉整個指令處理。
+        // 走既有的「無效物品」錯誤分支就好。
+        var itemRow = itemSheet.GetRowOrDefault(itemId);
+        if (itemRow is null)
+        {
+            DuoLog.Error($"Invalid item id or name: '{idOrNameArg}'.");
+            return;
+        }
+
+        var item = itemRow.Value;
 
         var tempDiagnosticsMode = Config.DiagnosticsMode;
         Config.DiagnosticsMode = true;
