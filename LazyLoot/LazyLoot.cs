@@ -56,6 +56,10 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         Svc.PluginInterface.UiBuilder.OpenMainUi += OnOpenConfigUi;
         Svc.PluginInterface.UiBuilder.OpenConfigUi += OnOpenConfigUi;
         Svc.Chat.ChatMessage += NoticeLoot;
+        // ⚠️ 診斷刻意獨立訂閱，不掛在 NoticeLoot 裡面 ——
+        //    NoticeLoot 第一件事就是 `if (!Config.FulfEnabled) return;`，
+        //    掛進去等於讓診斷被 FULF 開關靜默吃掉。
+        RollDiagnostics.Enable();
         Svc.ClientState.TerritoryChanged += OnTerritoryChanged;
         SyncWeeklyLockoutDutyState(Svc.ClientState.TerritoryType);
 
@@ -190,6 +194,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         Svc.PluginInterface.UiBuilder.OpenMainUi -= OnOpenConfigUi;
         Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
         Svc.Chat.ChatMessage -= NoticeLoot;
+        RollDiagnostics.Disable();
         Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
 
         Svc.Commands.RemoveHandler("/lazyloot");
