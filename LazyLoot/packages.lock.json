@@ -8,17 +8,14 @@
         "resolved": "14.0.2",
         "contentHash": "dQJeq+8eyHzra4Cg5eZ/3LAeS3/UpvvLriYJGSncMK9LqJ7Q4B6jwcOsxo3PfxVd15xj+IzVFxkPqIBmPQu8/w=="
       },
-      "ECommons": {
-        "type": "Direct",
-        "requested": "[3.0.1.10, )",
-        "resolved": "3.0.1.10",
-        "contentHash": "EHFFs6YlI+DQemaGCyVvcLSYbkDFXds4yndVhS6V96TJ02bFrUiERx6C4erYiYZ25V9C3JblDHcRIhGLfAivuQ=="
-      },
       "HtmlAgilityPack": {
         "type": "Direct",
         "requested": "[1.11.46, )",
         "resolved": "1.11.46",
         "contentHash": "dLMn4EVfJBHWmWK4Uh0XGD76FPLHI0qr2Tm0s1m/xmgiHb1JUb9zB8AzO8HtrkBBlMN6JfCUBYddhqC0hZNR+g=="
+      },
+      "ecommons": {
+        "type": "Project"
       },
       "punishlib": {
         "type": "Project",

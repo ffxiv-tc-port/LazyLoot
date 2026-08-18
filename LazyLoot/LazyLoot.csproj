@@ -63,7 +63,16 @@
 	
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="14.0.2" />
-		<PackageReference Include="ECommons" Version="3.0.1.10" />
+		<!-- ECommons 走本 org 的 fork 子模組(BaseVersion 仍是 3.0.1.15,只換來源不換版本號)。
+		     公開 NuGet 的 3.0.1.10 沒有我們補的判空/加固,而 PunishLib 自己就宣告了那顆
+		     PackageReference,所以這裡不換來源的話出貨的會是未加固版。
+		     🔴 這裡是 ProjectReference 而不是 PackageReference:PunishLib 遞移宣告的
+		     ECommons NuGet 3.0.1.10 會被這個 ProjectReference 蓋掉。
+		     ✅ 2026-08-19 實證(不再是推測):Artisan 的出貨 DLL 與本 repo 建置後的
+		     bin/Release/ECommons.dll 都帶加固版獨有的 IsComponentEnabled 標記,
+		     且 obj/project.assets.json 的 ECommons 條目是 type=project。
+		     驗法 tools/fleet/ecommons_hardening_check.py。 -->
+		<ProjectReference Include="..\ECommons\ECommons\ECommons.csproj" />
 		<PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
 		<ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj" />
 		<Reference Include="FFXIVClientStructs">
