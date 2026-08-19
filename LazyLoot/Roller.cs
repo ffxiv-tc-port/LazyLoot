@@ -511,9 +511,17 @@ internal static class Roller
     {
         try
         {
+            // 🔴 原特徵碼 "41 83 F8 ?? 0F 83 ?? ?? ?? ?? 48 89 5C 24 08"(cmp r8d,imm; jae; mov [rsp+8],rbx)在台服 7.20
+            //    命中 2 個位址(0x140A3B180 與 0x140A3B4D0)。離線位元組比對證實:這兩支函式除了「相對位移位元組」
+            //    (兩個 rip 相對資料參考、三個 call rel32,全部解析到同一組目標)之外**逐位元組相同**——是同一支
+            //    RollItemRaw 未被 COMDAT 折疊的兩份複本,呼叫任一者行為完全相同 ⇒ 多重命中良性,不存在「錯命中」。
+            //    無法在不使用相對位移位元組(改版易碎)的前提下收斂到 1 命中,且收斂沒有安全效益(兩份相同)。
+            //    這裡是 Marshal.GetDelegateForFunctionPointer 的裸函式指標呼叫,故延長特徵碼鎖進 RollItemRaw 專有的
+            //    大型堆疊框(sub rsp, 0xf80)以降低「未來改版出現不相干函式意外命中」的機率;仍命中同兩份正解複本。
+            //    ScanText 找不到時擲例外→被下方 catch 吞下、_rollItemRaw 留 null→?.Invoke 空操作(fail-closed,擲骰不發生)。
             _rollItemRaw ??=
                 Marshal.GetDelegateForFunctionPointer<RollItemRaw>(
-                    Svc.SigScanner.ScanText("41 83 F8 ?? 0F 83 ?? ?? ?? ?? 48 89 5C 24 08"));
+                    Svc.SigScanner.ScanText("41 83 F8 ?? 0F 83 ?? ?? ?? ?? 48 89 5C 24 08 48 89 74 24 10 57 48 81 EC 80 0F 00 00"));
             _rollItemRaw?.Invoke(Loot.Instance(), option, index);
         }
         catch (Exception ex)
