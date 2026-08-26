@@ -56,6 +56,10 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         Svc.PluginInterface.UiBuilder.OpenMainUi += OnOpenConfigUi;
         Svc.PluginInterface.UiBuilder.OpenConfigUi += OnOpenConfigUi;
         Svc.Chat.ChatMessage += NoticeLoot;
+        // ⚠️ 診斷刻意獨立訂閱，不掛在 NoticeLoot 裡面 ——
+        //    NoticeLoot 第一件事就是 `if (!Config.FulfEnabled) return;`，
+        //    掛進去等於讓診斷被 FULF 開關靜默吃掉。
+        RollDiagnostics.Enable();
         Svc.ClientState.TerritoryChanged += OnTerritoryChanged;
         SyncWeeklyLockoutDutyState(Svc.ClientState.TerritoryType);
 
@@ -83,9 +87,12 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
     private static void OnDtrClick(DtrInteractionEvent ev)
     {
+        // ⚠️ 這個外掛的右鍵已經有用途（反向切換拾取規則），所以「開關視窗」維持在 Ctrl+點擊，
+        // 不像其他外掛那樣綁右鍵 —— 把一個能用的功能換掉，比少一個捷徑糟。
+        // 由「只開啟」改成「開關」：再按一次會關掉。
         if (ev.ModifierKeys.HasFlag(ClickModifierKeys.Ctrl))
         {
-            _configUi.IsOpen = true;
+            _configUi.IsOpen ^= true;
             return;
         }
 
@@ -187,6 +194,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         Svc.PluginInterface.UiBuilder.OpenMainUi -= OnOpenConfigUi;
         Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
         Svc.Chat.ChatMessage -= NoticeLoot;
+        RollDiagnostics.Disable();
         Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
 
         Svc.Commands.RemoveHandler("/lazyloot");
@@ -249,29 +257,48 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
     private static void OnFrameworkUpdate(IFramework framework)
     {
-        string dtrText;
+        // DTR 這一格的版面預算只有一個字：列上只放「現在會怎麼骰」，
+        // 完整模式名稱與點擊操作一律進 tooltip。
+        // ⚠️ 這幾個字刻意寫死中文而不走 .Loc()：這個 fork 在建構式裡固定
+        //    Localization.Init("ChineseTraditional") 且沒有語言選單，
+        //    寫死才能在同一行看出「哪個字對哪個狀態」——對錯會害使用者骰錯東西。
+        var isWeeklyLockedDutyActive = Config is { RestrictionWeeklyLockoutItems: true, WeeklyLockoutDutyActive: true };
+
+        string modeShort, modeFull;
         if (Config.FulfEnabled)
         {
-            dtrText = Config.FulfRoll switch
+            (modeShort, modeFull) = Config.FulfRoll switch
             {
-                0 => "Needing".Loc(),
-                1 => "Greeding".Loc(),
-                2 => "Passing".Loc(),
+                0 => ("需", "需求（Need）"),
+                1 => ("貪", "貪婪（Greed）"),
+                2 => ("跳", "放棄（Pass）"),
                 _ => throw new ArgumentOutOfRangeException(nameof(Config.FulfRoll)),
             };
         }
         else
         {
-            dtrText = "FULF Disabled".Loc();
+            (modeShort, modeFull) = ("停", "已停用（不會自動擲骰）");
         }
 
-        var isWeeklyLockedDutyActive = Config is { RestrictionWeeklyLockoutItems: true, WeeklyLockoutDutyActive: true };
-
-        if (isWeeklyLockedDutyActive) dtrText += " (Disabled | WLD)".Loc();
+        // 週限任務暫停時原本是在模式後面接一長串「（已停用 | WLD）」。
+        // ⚠️ 這個狀態不能只藏進 tooltip —— 列上還顯示「需」但其實一顆都不會骰，
+        //    比顯示錯的資訊更糟。改成整格換成「鎖」，維持單字寬度又能一眼看出被暫停。
+        var dtrText = isWeeklyLockedDutyActive ? "鎖" : modeShort;
 
         _dtrEntry.Text = new SeString(
             new IconPayload(BitmapFontIcon.Dice),
             new TextPayload(dtrText));
+
+        // 這一格原本完全沒有提示，滑鼠移上去什麼都不會出現。
+        // ⚠️ 右鍵是「反向切換規則」而不是開視窗（其他外掛的右鍵才是開關視窗），
+        // 所以提示必須把這個差異講清楚，否則使用者會以為是壞的。
+        _dtrEntry.Tooltip = new SeString(new TextPayload(
+            $"LazyLoot 自動擲骰\n目前：{modeFull}\n"
+            + (isWeeklyLockedDutyActive ? "鎖：本週次數上限任務中，擲骰暫停\n" : "")
+            + "\n需：需求／貪：貪婪／跳：放棄／停：停用\n\n"
+            + "左鍵：切換到下一個規則\n"
+            + "右鍵：切換到上一個規則\n"
+            + "Ctrl+點擊：開啟／關閉設定視窗"));
 
         _dtrEntry.Shown = Config.ShowDtrEntry;
 
@@ -494,7 +521,17 @@ public class LazyLoot : IDalamudPlugin, IDisposable
             return;
         }
 
-        var item = itemSheet.GetRow(itemId);
+        // itemId 可能是使用者直接打進來的任意數字（/lazy test 999999），
+        // 裸 GetRow 查無此列時 Lumina 會擲例外並炸掉整個指令處理。
+        // 走既有的「無效物品」錯誤分支就好。
+        var itemRow = itemSheet.GetRowOrDefault(itemId);
+        if (itemRow is null)
+        {
+            DuoLog.Error($"Invalid item id or name: '{idOrNameArg}'.");
+            return;
+        }
+
+        var item = itemRow.Value;
 
         var tempDiagnosticsMode = Config.DiagnosticsMode;
         Config.DiagnosticsMode = true;

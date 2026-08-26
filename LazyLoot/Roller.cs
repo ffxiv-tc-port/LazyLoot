@@ -138,10 +138,12 @@ internal static class Roller
         }
 
         // Here, we will check for the specific rules for the Duty.
-        var contentFinderInfo = Svc.Data.GetExcelSheet<ContentFinderCondition>()
-            .GetRow(GameMain.Instance()->CurrentContentFinderConditionId);
+        // Match on the raw id: GetRow(id).RowId is always id when the row exists, and GetRow
+        // throws ArgumentOutOfRangeException when it does not, so comparing the id directly is
+        // behaviourally identical but cannot throw on an id the current game data has no row for.
+        var currentDutyId = GameMain.Instance()->CurrentContentFinderConditionId;
         var dutyCustomRestriction =
-            LazyLoot.Config.Restrictions.Duties.FirstOrDefault(x => x.Id == contentFinderInfo.RowId);
+            LazyLoot.Config.Restrictions.Duties.FirstOrDefault(x => x.Id == currentDutyId);
         if (dutyCustomRestriction is { Enabled: true })
         {
             if (LazyLoot.Config.DiagnosticsMode)
@@ -150,13 +152,26 @@ internal static class Roller
                     dutyCustomRestriction.RollRule == RollResult.Greeded ? "greeding" :
                     dutyCustomRestriction.RollRule == RollResult.Needed ? "needing" : "passing";
                 Svc.Log.Debug(
-                    $"{lootItem.Value.Name.ToString()} is {action} due to being in {contentFinderInfo.Name}. [Duty Custom Restriction]");
+                    $"{lootItem.Value.Name.ToString()} is {action} due to being in {DutyNameForLog(currentDutyId)}. [Duty Custom Restriction]");
             }
 
             return dutyCustomRestriction.RollRule;
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Duty name for diagnostic messages only. Never throws: falls back to the raw id when the
+    /// current game data has no row for it, so a stale/unknown id degrades the log line instead
+    /// of taking down the roll.
+    /// </summary>
+    private static string DutyNameForLog(uint contentFinderConditionId)
+    {
+        return Svc.Data.GetExcelSheet<ContentFinderCondition>()
+            .TryGetRow(contentFinderConditionId, out var row)
+            ? row.Name.ToString()
+            : $"#{contentFinderConditionId}";
     }
 
     private static bool ShouldPassUnlockable(bool restriction, bool onlyUntradeable, Item? item)
@@ -435,8 +450,9 @@ internal static class Roller
             var checkWeekly = LazyLoot.Config.RestrictionWeeklyLockoutItems;
 
             var lootId = loot.ItemId;
-            var contentFinderInfo = Svc.Data.GetExcelSheet<ContentFinderCondition>()
-                .GetRow(GameMain.Instance()->CurrentContentFinderConditionId);
+            // See GetPlayerCustomRestrict: match on the raw id so an id with no row in the
+            // current game data cannot throw out of the loot loop.
+            var currentDutyId = GameMain.Instance()->CurrentContentFinderConditionId;
 
             // We load the users restrictions
             var itemCustomRestriction =
@@ -444,13 +460,13 @@ internal static class Roller
                     x.Id == lootId && x is { Enabled: true });
             var dutyCustomRestriction =
                 LazyLoot.Config.Restrictions.Duties.FirstOrDefault(x =>
-                    x.Id == contentFinderInfo.RowId && x is { Enabled: true, RollRule: RollResult.UnAwarded });
+                    x.Id == currentDutyId && x is { Enabled: true, RollRule: RollResult.UnAwarded });
 
             Item? item = null;
 
             if (LazyLoot.Config.DiagnosticsMode)
                 // Only load the item if diagnostic mode is on
-                item = Svc.Data.GetExcelSheet<Item>().GetRow(loot.ItemId);
+                item = Svc.Data.GetExcelSheet<Item>().GetRowOrDefault(loot.ItemId);
 
             if (itemCustomRestriction != null)
             {
@@ -471,7 +487,7 @@ internal static class Roller
                 {
                     if (LazyLoot.Config.DiagnosticsMode)
                         DuoLog.Debug(
-                            $"{item?.Name.ToString()} is being ignored due to being in {contentFinderInfo.Name}. [Duty Custom Restriction]");
+                            $"{item?.Name.ToString()} is being ignored due to being in {DutyNameForLog(currentDutyId)}. [Duty Custom Restriction]");
                     continue;
                 }
 
@@ -495,9 +511,17 @@ internal static class Roller
     {
         try
         {
+            // 🔴 原特徵碼 "41 83 F8 ?? 0F 83 ?? ?? ?? ?? 48 89 5C 24 08"(cmp r8d,imm; jae; mov [rsp+8],rbx)在台服 7.20
+            //    命中 2 個位址(0x140A3B180 與 0x140A3B4D0)。離線位元組比對證實:這兩支函式除了「相對位移位元組」
+            //    (兩個 rip 相對資料參考、三個 call rel32,全部解析到同一組目標)之外**逐位元組相同**——是同一支
+            //    RollItemRaw 未被 COMDAT 折疊的兩份複本,呼叫任一者行為完全相同 ⇒ 多重命中良性,不存在「錯命中」。
+            //    無法在不使用相對位移位元組(改版易碎)的前提下收斂到 1 命中,且收斂沒有安全效益(兩份相同)。
+            //    這裡是 Marshal.GetDelegateForFunctionPointer 的裸函式指標呼叫,故延長特徵碼鎖進 RollItemRaw 專有的
+            //    大型堆疊框(sub rsp, 0xf80)以降低「未來改版出現不相干函式意外命中」的機率;仍命中同兩份正解複本。
+            //    ScanText 找不到時擲例外→被下方 catch 吞下、_rollItemRaw 留 null→?.Invoke 空操作(fail-closed,擲骰不發生)。
             _rollItemRaw ??=
                 Marshal.GetDelegateForFunctionPointer<RollItemRaw>(
-                    Svc.SigScanner.ScanText("41 83 F8 ?? 0F 83 ?? ?? ?? ?? 48 89 5C 24 08"));
+                    Svc.SigScanner.ScanText("41 83 F8 ?? 0F 83 ?? ?? ?? ?? 48 89 5C 24 08 48 89 74 24 10 57 48 81 EC 80 0F 00 00"));
             _rollItemRaw?.Invoke(Loot.Instance(), option, index);
         }
         catch (Exception ex)
