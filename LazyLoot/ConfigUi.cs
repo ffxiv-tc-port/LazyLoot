@@ -1,4 +1,4 @@
-using Dalamud.Bindings.ImGui;
+using ImGuiNET;
 using Dalamud.Interface.Colors;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Textures;
@@ -7,6 +7,7 @@ using Dalamud.Interface.Windowing;
 using ECommons;
 using ECommons.DalamudServices;
 using ECommons.ImGuiMethods;
+using ECommons.LanguageHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel;
 using Lumina.Excel.Sheets;
@@ -47,7 +48,7 @@ public class ConfigUi : Window, IDisposable
         [FieldOffset(0x38)] public LootMode LootMode;
     }
 
-    public ConfigUi() : base("Lazy Loot Config")
+    public ConfigUi() : base("Lazy Loot Config".Loc())
     {
         SizeConstraints = new WindowSizeConstraints
         {
@@ -68,7 +69,7 @@ public class ConfigUi : Window, IDisposable
     {
         if (ImGui.BeginTabBar("config"))
         {
-            if (ImGui.BeginTabItem("Features"))
+            if (ImGui.BeginTabItem("Features".Loc()))
             {
                 DrawFeatures();
                 ImGui.Separator();
@@ -84,13 +85,13 @@ public class ConfigUi : Window, IDisposable
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("User Restriction"))
+            if (ImGui.BeginTabItem("User Restriction".Loc()))
             {
                 DrawUserRestriction();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("About"))
+            if (ImGui.BeginTabItem("About".Loc()))
             {
                 AboutTab.Draw("LazyLoot");
                 ImGui.EndTabItem();
@@ -160,19 +161,19 @@ public class ConfigUi : Window, IDisposable
 
     private void DrawDiagnostics()
     {
-        ImGuiEx.LineCentered("DiagnosticsLabel", () => ImGuiEx.TextUnderlined("Diagnostics & Troubleshooting"));
+        ImGuiEx.LineCentered("DiagnosticsLabel", () => ImGuiEx.TextUnderlined("Diagnostics & Troubleshooting".Loc()));
 
-        if (ImGui.Checkbox("Diagnostics Mode", ref LazyLoot.Config.DiagnosticsMode))
+        if (ImGui.Checkbox("Diagnostics Mode".Loc(), ref LazyLoot.Config.DiagnosticsMode))
             LazyLoot.Config.Save();
 
         ImGuiComponents.HelpMarker(
-            "Outputs additional messages to chat whenever an item is passed, with reasons. This is useful for helping to diagnose issues with the developers or for understanding why LazyLoot makes decisions to pass on items.\r\n\r\nThese messages will only be displayed to you, nobody else in-game can see them.");
+            "Outputs additional messages to chat whenever an item is passed, with reasons. This is useful for helping to diagnose issues with the developers or for understanding why LazyLoot makes decisions to pass on items.\n\nThese messages will only be displayed to you, nobody else in-game can see them.".Loc());
 
-        if (ImGui.Checkbox("Don't pass on items that fail to roll.", ref LazyLoot.Config.NoPassEmergency))
+        if (ImGui.Checkbox("Don't pass on items that fail to roll.".Loc(), ref LazyLoot.Config.NoPassEmergency))
             LazyLoot.Config.Save();
 
         ImGuiComponents.HelpMarker(
-            "Normally LazyLoot will pass on items that fail to roll. Enabling this option will prevent it from passing in those situations. Be warned there could be weird side effects doing this and should only be used if you're running into issues with emergency passing appearing.");
+            "Normally LazyLoot will pass on items that fail to roll. Enabling this option will prevent it from passing in those situations. Be warned there could be weird side effects doing this and should only be used if you're running into issues with emergency passing appearing.".Loc());
     }
 
     public override void OnClose()
@@ -183,30 +184,30 @@ public class ConfigUi : Window, IDisposable
 
     private static void DrawFeatures()
     {
-        ImGuiEx.LineCentered("FeaturesLabel", () => ImGuiEx.TextUnderlined("LazyLoot Rolling Commands"));
-        ImGui.Columns(2, ImU8String.Empty, false);
+        ImGuiEx.LineCentered("FeaturesLabel", () => ImGuiEx.TextUnderlined("LazyLoot Rolling Commands".Loc()));
+        ImGui.Columns(2, null, false);
         ImGui.SetColumnWidth(0, 80);
         ImGui.Text("/lazy need");
         ImGui.NextColumn();
-        ImGui.Text("Roll need for everything. If impossible, roll greed (or pass if greed is impossible).");
+        ImGui.Text("Roll need for everything. If impossible, roll greed (or pass if greed is impossible).".Loc());
         ImGui.NextColumn();
         ImGui.Text("/lazy greed");
         ImGui.NextColumn();
-        ImGui.Text("Roll greed for everything. If impossible, roll pass.");
+        ImGui.Text("Roll greed for everything. If impossible, roll pass.".Loc());
         ImGui.NextColumn();
         ImGui.Text("/lazy pass");
         ImGui.NextColumn();
-        ImGui.Text("Pass on things you haven't rolled for yet.");
+        ImGui.Text("Pass on things you haven't rolled for yet.".Loc());
         ImGui.NextColumn();
         ImGui.Columns(1);
     }
 
     private static void DrawRollingDelay()
     {
-        ImGuiEx.LineCentered("RollingDelayLabel", () => ImGuiEx.TextUnderlined("Rolling Command Delay"));
+        ImGuiEx.LineCentered("RollingDelayLabel", () => ImGuiEx.TextUnderlined("Rolling Command Delay".Loc()));
         ImGui.SetNextItemWidth(100);
 
-        if (ImGui.DragFloatRange2("Rolling delay between items", ref LazyLoot.Config.MinRollDelayInSeconds,
+        if (ImGui.DragFloatRange2("Rolling delay between items".Loc(), ref LazyLoot.Config.MinRollDelayInSeconds,
                 ref LazyLoot.Config.MaxRollDelayInSeconds, 0.1f))
         {
             LazyLoot.Config.MinRollDelayInSeconds = Math.Max(LazyLoot.Config.MinRollDelayInSeconds, 0.5f);
@@ -222,7 +223,7 @@ public class ConfigUi : Window, IDisposable
         ImGui.PushID(id);
         ImGui.Indent(20f);
         ImGui.Checkbox(
-            "Only Untradeables",
+            "Only Untradeables".Loc(),
             ref thisRestriction);
         ImGui.Unindent(20f);
         ImGui.PopID();
@@ -230,9 +231,9 @@ public class ConfigUi : Window, IDisposable
 
     private static void DrawUserRestrictionEverywhere()
     {
-        ImGui.TextWrapped("Settings in this page will apply to every single item, even if they are tradeable or not.");
+        ImGui.TextWrapped("Settings in this page will apply to every single item, even if they are tradeable or not.".Loc());
         ImGui.Separator();
-        ImGui.Checkbox("Pass on items with an item level below",
+        ImGui.Checkbox("Pass on items with an item level below".Loc(),
             ref LazyLoot.Config.RestrictionIgnoreItemLevelBelow);
         ImGui.SameLine();
         ImGui.SetNextItemWidth(50);
@@ -242,33 +243,33 @@ public class ConfigUi : Window, IDisposable
             LazyLoot.Config.RestrictionIgnoreItemLevelBelowValue = 0;
 
         Utils.CheckboxTextWrapped(
-            "Pass on all items already unlocked. (Triple Triad Cards, Orchestrions, Faded Copies, Minions, Mounts, Emotes, Hairstyles)",
+            "Pass on all items already unlocked. (Triple Triad Cards, Orchestrions, Faded Copies, Minions, Mounts, Emotes, Hairstyles)".Loc(),
             ref LazyLoot.Config.RestrictionIgnoreItemUnlocked);
 
         if (!LazyLoot.Config.RestrictionIgnoreItemUnlocked)
         {
-            ImGui.Checkbox("Pass on unlocked Mounts.", ref LazyLoot.Config.RestrictionIgnoreMounts);
+            ImGui.Checkbox("Pass on unlocked Mounts.".Loc(), ref LazyLoot.Config.RestrictionIgnoreMounts);
             DrawOnlyUntradeableCheckbox(
                 "RestrictionMountsOnlyUntradeables",
                 ref LazyLoot.Config.RestrictionIgnoreMounts,
                 ref LazyLoot.Config.RestrictionMountsOnlyUntradeables
             );
 
-            ImGui.Checkbox("Pass on unlocked Minions.", ref LazyLoot.Config.RestrictionIgnoreMinions);
+            ImGui.Checkbox("Pass on unlocked Minions.".Loc(), ref LazyLoot.Config.RestrictionIgnoreMinions);
             DrawOnlyUntradeableCheckbox(
                 "RestrictionMinionsOnlyUntradeables",
                 ref LazyLoot.Config.RestrictionIgnoreMinions,
                 ref LazyLoot.Config.RestrictionMinionsOnlyUntradeables
             );
 
-            ImGui.Checkbox("Pass on unlocked Bardings.", ref LazyLoot.Config.RestrictionIgnoreBardings);
+            ImGui.Checkbox("Pass on unlocked Bardings.".Loc(), ref LazyLoot.Config.RestrictionIgnoreBardings);
             DrawOnlyUntradeableCheckbox(
                 "RestrictionBardingsOnlyUntradeables",
                 ref LazyLoot.Config.RestrictionIgnoreBardings,
                 ref LazyLoot.Config.RestrictionBardingsOnlyUntradeables
             );
 
-            ImGui.Checkbox("Pass on unlocked Triple Triad cards.",
+            ImGui.Checkbox("Pass on unlocked Triple Triad cards.".Loc(),
                 ref LazyLoot.Config.RestrictionIgnoreTripleTriadCards);
             DrawOnlyUntradeableCheckbox(
                 "RestrictionTripleTriadCardsOnlyUntradeables",
@@ -276,7 +277,7 @@ public class ConfigUi : Window, IDisposable
                 ref LazyLoot.Config.RestrictionTripleTriadCardsOnlyUntradeables
             );
 
-            ImGui.Checkbox("Pass on unlocked Emotes and Hairstyle.",
+            ImGui.Checkbox("Pass on unlocked Emotes and Hairstyle.".Loc(),
                 ref LazyLoot.Config.RestrictionIgnoreEmoteHairstyle);
             DrawOnlyUntradeableCheckbox(
                 "RestrictionEmoteHairstyleOnlyUntradeables",
@@ -284,7 +285,7 @@ public class ConfigUi : Window, IDisposable
                 ref LazyLoot.Config.RestrictionEmoteHairstyleOnlyUntradeables
             );
 
-            ImGui.Checkbox("Pass on unlocked Orchestrion Rolls.",
+            ImGui.Checkbox("Pass on unlocked Orchestrion Rolls.".Loc(),
                 ref LazyLoot.Config.RestrictionIgnoreOrchestrionRolls);
             DrawOnlyUntradeableCheckbox(
                 "RestrictionOrchestrionRollsOnlyUntradeables",
@@ -292,7 +293,7 @@ public class ConfigUi : Window, IDisposable
                 ref LazyLoot.Config.RestrictionOrchestrionRollsOnlyUntradeables
             );
 
-            ImGui.Checkbox("Pass on unlocked Faded Copies.", ref LazyLoot.Config.RestrictionIgnoreFadedCopy);
+            ImGui.Checkbox("Pass on unlocked Faded Copies.".Loc(), ref LazyLoot.Config.RestrictionIgnoreFadedCopy);
             DrawOnlyUntradeableCheckbox(
                 "RestrictionFadedCopyOnlyUntradeables",
                 ref LazyLoot.Config.RestrictionIgnoreFadedCopy,
@@ -306,21 +307,21 @@ public class ConfigUi : Window, IDisposable
             ref LazyLoot.Config.RestrictionAllUnlockablesOnlyUntradeables
         );
 
-        ImGui.Checkbox("Pass on items I can't use with current job.",
+        ImGui.Checkbox("Pass on items I can't use with current job.".Loc(),
             ref LazyLoot.Config.RestrictionOtherJobItems);
 
-        ImGui.Checkbox("Don't roll on items or duties with a weekly lockout.",
+        ImGui.Checkbox("Don't roll on items or duties with a weekly lockout.".Loc(),
             ref LazyLoot.Config.RestrictionWeeklyLockoutItems);
 
         ImGui.Checkbox("###RestrictionWeeklyLockoutItems", ref LazyLoot.Config.RestrictionLootLowerThanJobIlvl);
         ImGui.SameLine();
-        ImGui.Text("Roll");
+        ImGui.Text("Roll".Loc());
         ImGui.SameLine();
         ImGui.SetNextItemWidth(80);
         ImGui.Combo("###RestrictionLootLowerThanJobIlvlRollState",
-            ref LazyLoot.Config.RestrictionLootLowerThanJobIlvlRollState, new[] { "Greed", "Pass" }, 2);
+            ref LazyLoot.Config.RestrictionLootLowerThanJobIlvlRollState, new[] { "Greed".Loc(), "Pass".Loc() }, 2);
         ImGui.SameLine();
-        ImGui.Text("on items that are");
+        ImGui.Text("on items that are".Loc());
         ImGui.SetNextItemWidth(50);
         ImGui.SameLine();
         ImGui.DragInt("###RestrictionLootLowerThanJobIlvlTreshold",
@@ -328,35 +329,35 @@ public class ConfigUi : Window, IDisposable
         if (LazyLoot.Config.RestrictionLootLowerThanJobIlvlTreshold < 0)
             LazyLoot.Config.RestrictionLootLowerThanJobIlvlTreshold = 0;
         ImGui.SameLine();
-        ImGui.Text($"item levels lower than your current job item level (\u2605 {Utils.GetPlayerIlevel()}).");
-        ImGuiComponents.HelpMarker("This setting will only apply to gear you can need on.");
+        ImGui.Text("item levels lower than your current job item level (\u2605 ??).".Loc(Utils.GetPlayerIlevel()));
+        ImGuiComponents.HelpMarker("This setting will only apply to gear you can need on.".Loc());
 
         ImGui.Checkbox("###RestrictionLootIsJobUpgrade", ref LazyLoot.Config.RestrictionLootIsJobUpgrade);
         ImGui.SameLine();
-        ImGui.Text("Roll");
+        ImGui.Text("Roll".Loc());
         ImGui.SameLine();
         ImGui.SetNextItemWidth(80);
         ImGui.Combo("###RestrictionLootIsJobUpgradeRollState",
             ref LazyLoot.Config.RestrictionLootIsJobUpgradeRollState,
-            new[] { "Greed", "Pass" }, 2);
+            new[] { "Greed".Loc(), "Pass".Loc() }, 2);
         ImGui.SameLine();
-        ImGui.Text("on items if the current equipped item of the same type has a higher item level.");
-        ImGuiComponents.HelpMarker("This setting will only apply to gear you can need on.");
+        ImGui.Text("on items if the current equipped item of the same type has a higher item level.".Loc());
+        ImGuiComponents.HelpMarker("This setting will only apply to gear you can need on.".Loc());
 
         ImGui.Checkbox("###RestrictionSeals", ref LazyLoot.Config.RestrictionSeals);
         ImGui.SameLine();
-        ImGui.Text("Pass on items with an expert delivery seal value of less than");
+        ImGui.Text("Pass on items with an expert delivery seal value of less than".Loc());
         ImGui.SameLine();
         ImGui.SetNextItemWidth(100);
         ImGui.DragInt("###RestrictionSealsAmnt", ref LazyLoot.Config.RestrictionSealsAmnt);
         ImGui.SameLine();
-        ImGui.Text($"(item level {Roller.ConvertSealsToIlvl(LazyLoot.Config.RestrictionSealsAmnt)} and below)");
+        ImGui.Text("(item level ?? and below)".Loc(Roller.ConvertSealsToIlvl(LazyLoot.Config.RestrictionSealsAmnt)));
         ImGuiComponents.HelpMarker(
-            "This setting will only apply to gear able to be turned in for expert delivery.");
+            "This setting will only apply to gear able to be turned in for expert delivery.".Loc());
 
         ImGui.Checkbox("###NeverPassGlam", ref LazyLoot.Config.NeverPassGlam);
         ImGui.SameLine();
-        ImGui.TextWrapped("Never pass on glamour items (Items that have an item and iLvl of 1)");
+        ImGui.TextWrapped("Never pass on glamour items (Items that have an item and iLvl of 1)".Loc());
     }
 
     private static void CenterText()
@@ -364,7 +365,7 @@ public class ConfigUi : Window, IDisposable
         ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (ImGui.GetColumnWidth() - ImGui.GetFrameHeight()) * 0.5f);
     }
 
-    private static ImTextureID GetDutyIcon(ContentFinderCondition duty)
+    private static nint GetDutyIcon(ContentFinderCondition duty)
     {
         var icon = duty is { HighEndDuty: true, ContentType.Value.RowId: 5 }
             ? Svc.Data.GetExcelSheet<ContentType>()
@@ -376,7 +377,7 @@ public class ConfigUi : Window, IDisposable
         }
 
         var itemIcon = GetItemIcon(icon);
-        return itemIcon?.Handle ?? default;
+        return itemIcon?.ImGuiHandle ?? default;
     }
 
     private static void DrawUserRestrictionItems()
@@ -386,13 +387,13 @@ public class ConfigUi : Window, IDisposable
             () =>
             {
                 ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudYellow);
-                ImGui.TextWrapped("These rules override any other restriction settings, but the weekly lockout.");
+                ImGui.TextWrapped("These rules override any other restriction settings, but the weekly lockout.".Loc());
                 ImGui.PopStyleColor();
             });
         ImGui.Dummy(new Vector2(0, 6));
         ImGui.Separator();
         ImGui.Dummy(new Vector2(0, 6));
-        
+
         var items = LazyLoot.Config.Restrictions.Items;
 
         if (items.Count == 0)
@@ -402,8 +403,8 @@ public class ConfigUi : Window, IDisposable
             if (ImGui.BeginChild("##UserRestrictionEmptyState", new Vector2(-1, 60), true,
                     ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
             {
-                ImGuiEx.TextCentered("No items added.");
-                ImGuiEx.TextCentered("Click the Add item below to start adding items.");
+                ImGuiEx.TextCentered("No items added.".Loc());
+                ImGuiEx.TextCentered("Click the Add item below to start adding items.".Loc());
                 ImGui.EndChild();
             }
 
@@ -414,13 +415,13 @@ public class ConfigUi : Window, IDisposable
         {
             if (ImGui.BeginTable("UserRestrictionItemsTable", 8, ImGuiTableFlags.Borders))
             {
-                ImGui.TableSetupColumn("Enabled", ImGuiTableColumnFlags.WidthFixed, 50f);
-                ImGui.TableSetupColumn("Icon", ImGuiTableColumnFlags.WidthFixed, 32f);
-                ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn("Need", ImGuiTableColumnFlags.WidthFixed, 50f);
-                ImGui.TableSetupColumn("Greed", ImGuiTableColumnFlags.WidthFixed, 50f);
-                ImGui.TableSetupColumn("Pass", ImGuiTableColumnFlags.WidthFixed, 50f);
-                ImGui.TableSetupColumn("Nothing", ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Enabled".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Icon".Loc(), ImGuiTableColumnFlags.WidthFixed, 32f);
+                ImGui.TableSetupColumn("Name".Loc(), ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("Need".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Greed".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Pass".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Nothing".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
                 ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 60f);
                 ImGui.TableHeadersRow();
 
@@ -443,7 +444,7 @@ public class ConfigUi : Window, IDisposable
 
                     var icon = GetItemIcon(restrictedItem.Icon);
                     if (icon != null)
-                        ImGui.Image(icon.Handle, new Vector2(24, 24));
+                        ImGui.Image(icon.ImGuiHandle, new Vector2(24, 24));
                     else
                         ImGui.Text("-");
 
@@ -485,7 +486,7 @@ public class ConfigUi : Window, IDisposable
                     }
 
                     ImGui.TableNextColumn();
-                    if (ImGui.Button($"Remove##{item.Id}"))
+                    if (ImGui.Button("Remove".Loc() + $"##{item.Id}"))
                     {
                         LazyLoot.Config.Restrictions.Items.RemoveAt(i);
                         LazyLoot.Config.Save();
@@ -498,22 +499,22 @@ public class ConfigUi : Window, IDisposable
         }
 
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(2, 0));
-        if (ImGui.Button("Export", new Vector2(60, 0)))
+        if (ImGui.Button("Export".Loc(), new Vector2(60, 0)))
         {
             var json = System.Text.Json.JsonSerializer.Serialize(LazyLoot.Config.Restrictions.Items);
             ImGui.SetClipboardText(json);
-            Notify.Success("Item Restrictions settings copied to clipboard!");
+            Notify.Success("Item Restrictions settings copied to clipboard!".Loc());
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Import", new Vector2(60, 0)))
+        if (ImGui.Button("Import".Loc(), new Vector2(60, 0)))
         {
             try
             {
                 bool userImported = ImportFromClipboard("import_item_confirmation");
                 if (!userImported)
                 {
-                    Notify.Error("Failed to import item restriction settings - invalid format");
+                    Notify.Error("Failed to import item restriction settings - invalid format".Loc());
                 }
             }
             catch (Exception e)
@@ -523,12 +524,12 @@ public class ConfigUi : Window, IDisposable
         }
 
         ImGui.SameLine();
-        
+
         var itemSheet = Svc.Data.GetExcelSheet<Item>();
         Utils.PopupListButton(
-            buttonLabel: "Add item...",
+            buttonLabel: "Add item...".Loc(),
             popupId: "item_search_add",
-            popupTitle: "Search for item:",
+            popupTitle: "Search for item:".Loc(),
             getResults: q =>
             {
                 if (uint.TryParse(q, out var searchId))
@@ -551,7 +552,7 @@ public class ConfigUi : Window, IDisposable
                 var icon = GetItemIcon(item.Icon);
                 if (icon != null)
                 {
-                    ImGui.Image(icon.Handle, new Vector2(16, 16));
+                    ImGui.Image(icon.ImGuiHandle, new Vector2(16, 16));
                     ImGui.SameLine();
                 }
                 if (ImGui.IsItemHovered())
@@ -581,16 +582,16 @@ public class ConfigUi : Window, IDisposable
                 ImGui.CloseCurrentPopup();
             }
 
-            ImGui.Text("Are you sure you want to replace your current item restrictions configuration?");
-            ImGuiEx.LineCentered(() => ImGuiEx.TextUnderlined("This action cannot be undone."));
+            ImGui.Text("Are you sure you want to replace your current item restrictions configuration?".Loc());
+            ImGuiEx.LineCentered(() => ImGuiEx.TextUnderlined("This action cannot be undone.".Loc()));
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(40 / 255f, 167 / 255f, 69 / 255f, 1.0f));
-            if (ImGui.Button("YES", new Vector2(100f, 0)))
+            if (ImGui.Button("YES".Loc(), new Vector2(100f, 0)))
             {
                 if (_importedRestrictions != null)
                 {
                     LazyLoot.Config.Restrictions.Items = _importedRestrictions;
                     LazyLoot.Config.Save();
-                    Notify.Success("Imported Item Restrictions successfully!");
+                    Notify.Success("Imported Item Restrictions successfully!".Loc());
                 }
 
                 ImGui.CloseCurrentPopup();
@@ -599,7 +600,7 @@ public class ConfigUi : Window, IDisposable
             ImGui.PopStyleColor();
             ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(220 / 255f, 53 / 255f, 69 / 255f, 1.0f));
-            if (ImGui.Button("NO", new Vector2(-1, 0)))
+            if (ImGui.Button("NO".Loc(), new Vector2(-1, 0)))
             {
                 ImGui.CloseCurrentPopup();
             }
@@ -616,7 +617,7 @@ public class ConfigUi : Window, IDisposable
         {
             if (sheet.Any(x => x.RowId == item.Id)) continue;
             bail = true;
-            Notify.Error($"Imported restriction contains invalid item ID: {item.Id}. Import cancelled.");
+            Notify.Error("Imported restriction contains invalid item ID: ??. Import cancelled.".Loc(item.Id));
         }
 
         if (bail)
@@ -633,7 +634,7 @@ public class ConfigUi : Window, IDisposable
         var clipboardText = ImGui.GetClipboardText();
         if (string.IsNullOrEmpty(clipboardText))
         {
-            Notify.Error("Nothing to import on your clipboard");
+            Notify.Error("Nothing to import on your clipboard".Loc());
             return false;
         }
 
@@ -663,7 +664,7 @@ public class ConfigUi : Window, IDisposable
             () =>
             {
                 ImGui.PushStyleColor(ImGuiCol.Text, ImGuiColors.DalamudYellow);
-                ImGui.TextWrapped("These rules override the main restriction settings, but is overriden by the item restriction settings if they happen to collide.");
+                ImGui.TextWrapped("These rules override the main restriction settings, but is overriden by the item restriction settings if they happen to collide.".Loc());
                 ImGui.PopStyleColor();
             });
         ImGui.Dummy(new Vector2(0, 6));
@@ -679,8 +680,8 @@ public class ConfigUi : Window, IDisposable
             if (ImGui.BeginChild("##UserRestrictionDutyEmptyState", new Vector2(-1, 60), true,
                     ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse))
             {
-                ImGuiEx.TextCentered("No duties added.");
-                ImGuiEx.TextCentered("Click the Add duty below to start adding duties.");
+                ImGuiEx.TextCentered("No duties added.".Loc());
+                ImGuiEx.TextCentered("Click the Add duty below to start adding duties.".Loc());
                 ImGui.EndChild();
             }
 
@@ -691,13 +692,13 @@ public class ConfigUi : Window, IDisposable
         {
             if (ImGui.BeginTable("UserRestrictionDutiesTable", 8, ImGuiTableFlags.Borders))
             {
-                ImGui.TableSetupColumn("Enabled", ImGuiTableColumnFlags.WidthFixed, 50f);
-                ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthFixed, 32f);
-                ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthStretch);
-                ImGui.TableSetupColumn("Need", ImGuiTableColumnFlags.WidthFixed, 50f);
-                ImGui.TableSetupColumn("Greed", ImGuiTableColumnFlags.WidthFixed, 50f);
-                ImGui.TableSetupColumn("Pass", ImGuiTableColumnFlags.WidthFixed, 50f);
-                ImGui.TableSetupColumn("Nothing", ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Enabled".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Type".Loc(), ImGuiTableColumnFlags.WidthFixed, 32f);
+                ImGui.TableSetupColumn("Name".Loc(), ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("Need".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Greed".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Pass".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
+                ImGui.TableSetupColumn("Nothing".Loc(), ImGuiTableColumnFlags.WidthFixed, 50f);
                 ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 60f);
                 ImGui.TableHeadersRow();
 
@@ -763,7 +764,7 @@ public class ConfigUi : Window, IDisposable
                     }
 
                     ImGui.TableNextColumn();
-                    if (ImGui.Button($"Remove##{duty.Id}"))
+                    if (ImGui.Button("Remove".Loc() + $"##{duty.Id}"))
                     {
                         LazyLoot.Config.Restrictions.Duties.RemoveAt(i);
                         LazyLoot.Config.Save();
@@ -776,22 +777,22 @@ public class ConfigUi : Window, IDisposable
         }
 
         ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new Vector2(2, 0));
-        if (ImGui.Button("Export", new Vector2(60, 0)))
+        if (ImGui.Button("Export".Loc(), new Vector2(60, 0)))
         {
             var json = System.Text.Json.JsonSerializer.Serialize(LazyLoot.Config.Restrictions.Duties);
             ImGui.SetClipboardText(json);
-            Notify.Success("Duty Restrictions copied to clipboard!");
+            Notify.Success("Duty Restrictions copied to clipboard!".Loc());
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Import", new Vector2(60, 0)))
+        if (ImGui.Button("Import".Loc(), new Vector2(60, 0)))
         {
             try
             {
                 bool userImported = ImportFromClipboard("import_duty_confirmation");
                 if (!userImported)
                 {
-                    Notify.Error("Failed to import duty restriction settings - invalid format");
+                    Notify.Error("Failed to import duty restriction settings - invalid format".Loc());
                 }
             }
             catch (Exception e)
@@ -803,9 +804,9 @@ public class ConfigUi : Window, IDisposable
         ImGui.SameLine();
         var dutySheet = Svc.Data.GetExcelSheet<ContentFinderCondition>();
         Utils.PopupListButton(
-            buttonLabel: "Add duty...",
+            buttonLabel: "Add duty...".Loc(),
             popupId: "duty_search_add",
-            popupTitle: "Search for duty:",
+            popupTitle: "Search for duty:".Loc(),
             getResults: q =>
             {
                 if (uint.TryParse(q, out var searchId))
@@ -852,16 +853,16 @@ public class ConfigUi : Window, IDisposable
                 ImGui.CloseCurrentPopup();
             }
 
-            ImGui.Text("Are you sure you want to replace your current duty restrictions configuration?");
-            ImGuiEx.LineCentered(() => ImGuiEx.TextUnderlined("This action cannot be undone."));
+            ImGui.Text("Are you sure you want to replace your current duty restrictions configuration?".Loc());
+            ImGuiEx.LineCentered(() => ImGuiEx.TextUnderlined("This action cannot be undone.".Loc()));
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(40 / 255f, 167 / 255f, 69 / 255f, 1.0f));
-            if (ImGui.Button("YES", new Vector2(100f, 0)))
+            if (ImGui.Button("YES".Loc(), new Vector2(100f, 0)))
             {
                 if (_importedRestrictions != null)
                 {
                     duties = _importedRestrictions;
                     LazyLoot.Config.Save();
-                    Notify.Success("Imported Duty Restrictions successfully!");
+                    Notify.Success("Imported Duty Restrictions successfully!".Loc());
                 }
 
                 ImGui.CloseCurrentPopup();
@@ -870,7 +871,7 @@ public class ConfigUi : Window, IDisposable
             ImGui.PopStyleColor();
             ImGui.SameLine();
             ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(220 / 255f, 53 / 255f, 69 / 255f, 1.0f));
-            if (ImGui.Button("NO", new Vector2(-1, 0)))
+            if (ImGui.Button("NO".Loc(), new Vector2(-1, 0)))
             {
                 ImGui.CloseCurrentPopup();
             }
@@ -884,19 +885,19 @@ public class ConfigUi : Window, IDisposable
     {
         if (ImGui.BeginTabBar("PerItemDutyConfigTabs"))
         {
-            if (ImGui.BeginTabItem("Everywhere..."))
+            if (ImGui.BeginTabItem("Everywhere...".Loc()))
             {
                 DrawUserRestrictionEverywhere();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("... but for these Items"))
+            if (ImGui.BeginTabItem("... but for these Items".Loc()))
             {
                 DrawUserRestrictionItems();
                 ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("... but for these Duties"))
+            if (ImGui.BeginTabItem("... but for these Duties".Loc()))
             {
                 DrawUserRestrictionDuties();
                 ImGui.EndTabItem();
@@ -908,70 +909,70 @@ public class ConfigUi : Window, IDisposable
 
     private void DrawChatAndToast()
     {
-        ImGuiEx.LineCentered("ChatInfoLabel", () => ImGuiEx.TextUnderlined("Roll Result Information"));
-        ImGui.Checkbox("Display roll information in chat.", ref LazyLoot.Config.EnableChatLogMessage);
+        ImGuiEx.LineCentered("ChatInfoLabel", () => ImGuiEx.TextUnderlined("Roll Result Information".Loc()));
+        ImGui.Checkbox("Display roll information in chat.".Loc(), ref LazyLoot.Config.EnableChatLogMessage);
         ImGui.Spacing();
-        ImGuiEx.LineCentered("ToastLabel", () => ImGuiEx.TextUnderlined("Display as Toasts"));
-        ImGuiComponents.HelpMarker("Show your roll information as a pop-up toast, using the various styles below.");
-        ImGui.Checkbox("Quest", ref LazyLoot.Config.EnableQuestToast);
+        ImGuiEx.LineCentered("ToastLabel", () => ImGuiEx.TextUnderlined("Display as Toasts".Loc()));
+        ImGuiComponents.HelpMarker("Show your roll information as a pop-up toast, using the various styles below.".Loc());
+        ImGui.Checkbox("Quest".Loc(), ref LazyLoot.Config.EnableQuestToast);
         ImGui.SameLine();
-        ImGui.Checkbox("Normal", ref LazyLoot.Config.EnableNormalToast);
+        ImGui.Checkbox("Normal".Loc(), ref LazyLoot.Config.EnableNormalToast);
         ImGui.SameLine();
-        ImGui.Checkbox("Error", ref LazyLoot.Config.EnableErrorToast);
+        ImGui.Checkbox("Error".Loc(), ref LazyLoot.Config.EnableErrorToast);
     }
 
     private static void DrawDtrToggle()
     {
         ImGui.Spacing();
-        ImGui.Text("Server Info Bar (DTR)");
+        ImGui.Text("Server Info Bar (DTR)".Loc());
         ImGui.Checkbox("###LazyLootDtrEnabled", ref LazyLoot.Config.ShowDtrEntry);
         ImGui.SameLine();
         ImGui.TextColored(
             LazyLoot.Config.ShowDtrEntry ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
-            LazyLoot.Config.ShowDtrEntry ? "DTR Enabled" : "DTR Disabled"
+            LazyLoot.Config.ShowDtrEntry ? "DTR Enabled".Loc() : "DTR Disabled".Loc()
         );
-        ImGui.TextWrapped("Show/hide LazyLoot in the Dalamud Server Info Bar (DTR).");
+        ImGui.TextWrapped("Show/hide LazyLoot in the Dalamud Server Info Bar (DTR).".Loc());
     }
 
     private void DrawFulf()
     {
-        ImGuiEx.LineCentered("FULFLabel", () => ImGuiEx.TextUnderlined("Fancy Ultimate Lazy Feature"));
+        ImGuiEx.LineCentered("FULFLabel", () => ImGuiEx.TextUnderlined("Fancy Ultimate Lazy Feature".Loc()));
 
         ImGui.TextWrapped(
-            "Fancy Ultimate Lazy Feature (FULF) is a set and forget feature that will automatically roll on items for you instead of having to use the commands above.");
+            "Fancy Ultimate Lazy Feature (FULF) is a set and forget feature that will automatically roll on items for you instead of having to use the commands above.".Loc());
         ImGui.Separator();
-        ImGui.Columns(2, ImU8String.Empty, false);
+        ImGui.Columns(2, null, false);
         ImGui.SetColumnWidth(0, 80);
         ImGui.Text("/fulf need");
         ImGui.NextColumn();
-        ImGui.Text("Set FULF to Needing mode, where it will follow the /lazy need rules.");
+        ImGui.Text("Set FULF to Needing mode, where it will follow the /lazy need rules.".Loc());
         ImGui.NextColumn();
         ImGui.Text("/fulf greed");
         ImGui.NextColumn();
-        ImGui.Text("Set FULF to Greeding mode, where it will follow the /lazy greed rules.");
+        ImGui.Text("Set FULF to Greeding mode, where it will follow the /lazy greed rules.".Loc());
         ImGui.NextColumn();
         ImGui.Text("/fulf pass");
         ImGui.NextColumn();
-        ImGui.Text("Set FULF to Passing mode, where it will follow the /lazy pass rules.");
+        ImGui.Text("Set FULF to Passing mode, where it will follow the /lazy pass rules.".Loc());
         ImGui.NextColumn();
         ImGui.Columns(1);
         ImGui.Separator();
         ImGui.Checkbox("###FulfEnabled", ref LazyLoot.Config.FulfEnabled);
         ImGui.SameLine();
         ImGui.TextColored(LazyLoot.Config.FulfEnabled ? ImGuiColors.HealerGreen : ImGuiColors.DalamudRed,
-            LazyLoot.Config.FulfEnabled ? "FULF Enabled" : "FULF Disabled");
+            LazyLoot.Config.FulfEnabled ? "FULF Enabled".Loc() : "FULF Disabled".Loc());
         if (LazyLoot.Config.RestrictionWeeklyLockoutItems && LazyLoot.Config.WeeklyLockoutDutyActive)
             ImGui.TextColored(ImGuiColors.DalamudYellow,
-                "Weekly Lockout Duty detected: FULF and /lazy rolls are temporarily disabled until you leave this duty or disable the weekly lockout setting.");
+                "Weekly Lockout Duty detected: FULF and /lazy rolls are temporarily disabled until you leave this duty or disable the weekly lockout setting.".Loc());
 
         ImGui.SetNextItemWidth(100);
 
-        if (ImGui.Combo("Roll options", ref LazyLoot.Config.FulfRoll, new[] { "Need", "Greed", "Pass" }, 3))
+        if (ImGui.Combo("Roll options".Loc(), ref LazyLoot.Config.FulfRoll, new[] { "Need".Loc(), "Greed".Loc(), "Pass".Loc() }, 3))
             LazyLoot.Config.Save();
 
-        ImGui.Text("First Roll Delay Range (In seconds)");
+        ImGui.Text("First Roll Delay Range (In seconds)".Loc());
         ImGui.SetNextItemWidth(100);
-        ImGui.DragFloat("Minimum Delay in seconds. ", ref LazyLoot.Config.FulfMinRollDelayInSeconds, 0.1F);
+        ImGui.DragFloat("Minimum Delay in seconds. ".Loc(), ref LazyLoot.Config.FulfMinRollDelayInSeconds, 0.1F);
 
         if (LazyLoot.Config.FulfMinRollDelayInSeconds >= LazyLoot.Config.FulfMaxRollDelayInSeconds)
             LazyLoot.Config.FulfMinRollDelayInSeconds = LazyLoot.Config.FulfMaxRollDelayInSeconds - 0.1f;
@@ -979,7 +980,7 @@ public class ConfigUi : Window, IDisposable
         if (LazyLoot.Config.FulfMinRollDelayInSeconds < 1.5f) LazyLoot.Config.FulfMinRollDelayInSeconds = 1.5f;
 
         ImGui.SetNextItemWidth(100);
-        ImGui.DragFloat("Maximum Delay in seconds. ", ref LazyLoot.Config.FulfMaxRollDelayInSeconds, 0.1F);
+        ImGui.DragFloat("Maximum Delay in seconds. ".Loc(), ref LazyLoot.Config.FulfMaxRollDelayInSeconds, 0.1F);
 
         if (LazyLoot.Config.FulfMaxRollDelayInSeconds <= LazyLoot.Config.FulfMinRollDelayInSeconds)
             LazyLoot.Config.FulfMaxRollDelayInSeconds = LazyLoot.Config.FulfMinRollDelayInSeconds + 0.1f;

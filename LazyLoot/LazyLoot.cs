@@ -1,5 +1,4 @@
-﻿using Dalamud.Game.Chat;
-using Dalamud.Game.ClientState.Conditions;
+﻿using Dalamud.Game.ClientState.Conditions;
 using Dalamud.Game.Command;
 using Dalamud.Game.Gui.Dtr;
 using Dalamud.Game.Text;
@@ -9,6 +8,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using ECommons;
 using ECommons.DalamudServices;
+using ECommons.LanguageHelpers;
 using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel.Sheets;
@@ -44,6 +44,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
     public LazyLoot(IDalamudPluginInterface pluginInterface)
     {
         ECommonsMain.Init(pluginInterface, this);
+        ECommons.LanguageHelpers.Localization.Init("ChineseTraditional");
         PunishLibMain.Init(pluginInterface, "LazyLoot", new AboutPlugin() { Developer = "53m1k0l0n/Gidedin" });
 
         Config = Svc.PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -60,44 +61,33 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
         Svc.Commands.AddHandler("/lazyloot", new CommandInfo(LazyCommand)
         {
-            HelpMessage = "Open Lazy Loot config.",
+            HelpMessage = "Open Lazy Loot config.".Loc(),
             ShowInHelp = true,
         });
 
         Svc.Commands.AddHandler("/lazy", new CommandInfo(LazyCommand)
         {
-            HelpMessage = "Open Lazy Loot config by default. Add need | greed | pass to roll on current items.",
+            HelpMessage = "Open Lazy Loot config by default. Add need | greed | pass to roll on current items.".Loc(),
             ShowInHelp = true,
         });
 
         Svc.Commands.AddHandler("/fulf", new CommandInfo(FulfCommand)
         {
             HelpMessage =
-                "Enable/Disable FULF with /fulf [on|off] or change the loot rule with /fulf need | greed | pass.",
+                "Enable/Disable FULF with /fulf [on|off] or change the loot rule with /fulf need | greed | pass.".Loc(),
             ShowInHelp = true,
         });
 
         Svc.Framework.Update += OnFrameworkUpdate;
     }
 
-    private static void OnDtrClick(DtrInteractionEvent ev)
+    // NOTE: TC's Dalamud IDtrBarEntry.OnClick is a plain Action (no modifier-key/click-type
+    // info), unlike the newer DtrInteractionEvent-based API. Left/right-click cycling and
+    // ctrl-click distinction aren't available in this API generation, so this always just
+    // opens the config UI.
+    private static void OnDtrClick()
     {
-        if (ev.ModifierKeys.HasFlag(ClickModifierKeys.Ctrl))
-        {
-            _configUi.IsOpen = true;
-            return;
-        }
-
-        switch (ev.ClickType)
-        {
-            case MouseClickType.Left:
-                CycleFulf(true);
-                break;
-
-            case MouseClickType.Right:
-                CycleFulf(false);
-                break;
-        }
+        _configUi.IsOpen = true;
     }
 
     private void LazyCommand(string command, string arguments)
@@ -185,7 +175,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
         Svc.PluginInterface.UiBuilder.OpenMainUi -= OnOpenConfigUi;
         Svc.PluginInterface.UiBuilder.OpenConfigUi -= OnOpenConfigUi;
-        Svc.Chat.CheckMessageHandled -= NoticeLoot;
+        Svc.Chat.ChatMessage -= NoticeLoot;
         Svc.ClientState.TerritoryChanged -= OnTerritoryChanged;
 
         Svc.Commands.RemoveHandler("/lazyloot");
@@ -253,20 +243,20 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         {
             dtrText = Config.FulfRoll switch
             {
-                0 => "Needing",
-                1 => "Greeding",
-                2 => "Passing",
+                0 => "Needing".Loc(),
+                1 => "Greeding".Loc(),
+                2 => "Passing".Loc(),
                 _ => throw new ArgumentOutOfRangeException(nameof(Config.FulfRoll)),
             };
         }
         else
         {
-            dtrText = "FULF Disabled";
+            dtrText = "FULF Disabled".Loc();
         }
 
         var isWeeklyLockedDutyActive = Config is { RestrictionWeeklyLockoutItems: true, WeeklyLockoutDutyActive: true };
 
-        if (isWeeklyLockedDutyActive) dtrText += " (Disabled | WLD)";
+        if (isWeeklyLockedDutyActive) dtrText += " (Disabled | WLD)".Loc();
 
         _dtrEntry.Text = new SeString(
             new IconPayload(BitmapFontIcon.Dice),
@@ -309,19 +299,19 @@ public class LazyLoot : IDalamudPlugin, IDisposable
     {
         SeString seString = new(new List<Payload>()
         {
-            new TextPayload("Need "),
+            new TextPayload("Need ".Loc()),
             new UIForegroundPayload(575),
             new TextPayload(need.ToString()),
             new UIForegroundPayload(0),
-            new TextPayload(" item" + (need == 1 ? "" : "s") + ", greed "),
+            new TextPayload((" item" + (need == 1 ? "" : "s") + ", greed ").Loc()),
             new UIForegroundPayload(575),
             new TextPayload(greed.ToString()),
             new UIForegroundPayload(0),
-            new TextPayload(" item" + (greed == 1 ? "" : "s") + ", pass "),
+            new TextPayload((" item" + (greed == 1 ? "" : "s") + ", pass ").Loc()),
             new UIForegroundPayload(575),
             new TextPayload(pass.ToString()),
             new UIForegroundPayload(0),
-            new TextPayload(" item" + (pass == 1 ? "" : "s") + ".")
+            new TextPayload((" item" + (pass == 1 ? "" : "s") + ".").Loc())
         });
 
         if (Config.EnableChatLogMessage)
@@ -345,14 +335,19 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         }
     }
 
-    private void NoticeLoot(IHandleableChatMessage handler)
+    private void NoticeLoot(XivChatType type, int timestamp, ref Dalamud.Game.Text.SeStringHandling.SeString sender, ref Dalamud.Game.Text.SeStringHandling.SeString message, ref bool isHandled)
     {
-        Svc.Log.Debug($"{handler.LogKind} {handler.Message}");
-        if (!Config.FulfEnabled || handler.LogKind != XivChatType.SystemMessage) return;
+        Svc.Log.Debug($"{type} {message}");
+        // TC note: the "cast your lot" roll prompt arrives as a different, undocumented
+        // chat type on TC (observed as raw type 2105 in logs, not XivChatType.SystemMessage
+        // like on global) - matching purely on chat type silently dropped every roll prompt
+        // and LazyLoot never auto-rolled. The message-text comparison below is unique enough
+        // on its own, so the chat-type gate is dropped rather than hardcoding TC's type value.
+        if (!Config.FulfEnabled) return;
         // do a few checks to see if the message is the weekly lockout message the game sends
-        if (CheckAndUpdateWeeklyLockoutDutyFlag(handler.Message)) return;
+        if (CheckAndUpdateWeeklyLockoutDutyFlag(message)) return;
         // if not Cast your lot, then just ignore
-        if (handler.Message.TextValue != Svc.Data.GetExcelSheet<LogMessage>().First(x => x.RowId == CastYourLotMessage).Text) return;
+        if (message.TextValue != Svc.Data.GetExcelSheet<LogMessage>().First(x => x.RowId == CastYourLotMessage).Text) return;
         _nextRollTime = DateTime.Now.AddMilliseconds(new Random()
             .Next((int)(Config.FulfMinRollDelayInSeconds * 1000),
                 (int)(Config.FulfMaxRollDelayInSeconds * 1000)));
@@ -384,7 +379,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         return true;
     }
 
-    private static void OnTerritoryChanged(uint territoryId)
+    private static void OnTerritoryChanged(ushort territoryId)
     {
         if (!IsHighEndDutyTerritory(territoryId))
         {
