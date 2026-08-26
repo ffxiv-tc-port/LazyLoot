@@ -10,9 +10,9 @@
       },
       "ECommons": {
         "type": "Direct",
-        "requested": "[3.0.0.8, )",
-        "resolved": "3.0.0.8",
-        "contentHash": "wvB3MTBTYQh8a7gAf5pLVS1wqyvihn4Q0RpHAgf/i+vMPVMMi/X2fegWE6JEY13syR4kl8WlGCkQmemxCZhe6Q=="
+        "requested": "[3.0.1.10, )",
+        "resolved": "3.0.1.10",
+        "contentHash": "EHFFs6YlI+DQemaGCyVvcLSYbkDFXds4yndVhS6V96TJ02bFrUiERx6C4erYiYZ25V9C3JblDHcRIhGLfAivuQ=="
       },
       "HtmlAgilityPack": {
         "type": "Direct",
@@ -23,7 +23,7 @@
       "punishlib": {
         "type": "Project",
         "dependencies": {
-          "ECommons": "[3.0.0.8, )"
+          "ECommons": "[3.0.1.10, )"
         }
       }
     }
