@@ -59,7 +59,8 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         // ⚠️ 診斷刻意獨立訂閱，不掛在 NoticeLoot 裡面 ——
         //    NoticeLoot 第一件事就是 `if (!Config.FulfEnabled) return;`，
         //    掛進去等於讓診斷被 FULF 開關靜默吃掉。
-        RollDiagnostics.Enable();
+        // 🔴 預設關閉，只有使用者自己打開（設定頁或 /lazy diag on）才會訂閱。
+        RollDiagnostics.Refresh();
         Svc.ClientState.TerritoryChanged += OnTerritoryChanged;
         SyncWeeklyLockoutDutyState(Svc.ClientState.TerritoryType);
 
@@ -130,10 +131,39 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
                     break;
                 }
+            case "diag":
+                ToggleRollDiagnostics(args.Length >= 2 ? args[1] : null);
+                return;
             default:
                 RollingCommand(null!, arguments);
                 return;
         }
+    }
+
+    /// <summary>
+    /// <c>/lazy diag [on|off]</c>：切換擲骰診斷記錄。沒帶參數就是反向切換。
+    /// ⚠️ 開著時每一句系統訊息都會寫一行 Information，只在要調查時才開。
+    /// </summary>
+    private static void ToggleRollDiagnostics(string? argument)
+    {
+        var wanted = argument?.ToLowerInvariant() switch
+        {
+            "on" or "true" or "1" => true,
+            "off" or "false" or "0" => false,
+            _ => !Config.RollDiagnosticsLogging,
+        };
+
+        Config.RollDiagnosticsLogging = wanted;
+        Config.Save();
+        RollDiagnostics.Refresh();
+
+        Svc.Chat.Print(new SeString(new List<Payload>
+        {
+            new TextPayload("[LazyLoot] "),
+            new TextPayload(wanted
+                ? "Roll diagnostics logging is now ON. This writes a log line for every system message - turn it off when you are done.".Loc()
+                : "Roll diagnostics logging is now OFF.".Loc()),
+        }));
     }
 
     private static void CycleFulf(bool forward)
@@ -375,7 +405,12 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
     private void NoticeLoot(XivChatType type, int timestamp, ref SeString sender, ref SeString message, ref bool isHandled)
     {
-        Svc.Log.Debug($"{type} {message}");
+        // 🔴 這一行原本無條件執行：每一句聊天都做一次字串內插並寫入 log，
+        //    是 LazyLoot 在實機 log 裡的最大宗來源。內插是先算再交給 log，
+        //    所以「等級關著就免費」不成立 —— 必須在外面用旗標擋掉。
+        //    共用「擲骰診斷記錄」這個開關，要調查時一起開。
+        if (Config.RollDiagnosticsLogging)
+            Svc.Log.Debug($"{type} {message}");
         // TC note: the "cast your lot" roll prompt arrives as a different, undocumented
         // chat type on TC (observed as raw type 2105 in logs, not XivChatType.SystemMessage
         // like on global) - matching purely on chat type silently dropped every roll prompt

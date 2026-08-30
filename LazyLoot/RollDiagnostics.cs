@@ -33,7 +33,10 @@ namespace LazyLoot;
 ///    台服的字串與國際服不同，用文字比對會靜默漏掉全部。
 ///
 /// 📌 一律寫 <c>Information</c> 等級：使用者跑 LogLevel 2，Debug/Verbose 收不到。
-/// 📌 不做節流、不做開關、不做任何 UI。
+/// 🔴 <b>預設關閉</b>：台服擲骰型別調查已收案，而 LogKind 57 是「系統訊息」大類，
+///    開著時實機一輪就是七萬多行 Information，會把使用者的 log 洗到看不見別的東西。
+///    要再次調查時由使用者自己打開（設定頁的「擲骰診斷記錄」或 <c>/lazy diag on</c>）。
+/// 📌 不做節流、不做任何自動關閉。
 ///    ⚠️ LogKind 57 是系統訊息這個大類，不只有擲骰提示，量會比 65 大不少；
 ///       這是為了拿到校準錨刻意付的代價，定案後這一整個模組就可以拿掉。
 /// </summary>
@@ -59,7 +62,24 @@ internal static class RollDiagnostics
 
     private static bool _subscribed;
 
-    internal static void Enable()
+    /// <summary>
+    /// 依目前設定訂閱或取消訂閱。外掛啟動時與設定被切換時各呼叫一次。
+    /// 🔴 關閉時「完全不訂閱」，而不是訂閱之後在回呼裡判斷 ——
+    ///    這個回呼每一句聊天都會跑，留著訂閱等於白付成本。
+    /// </summary>
+    internal static void Refresh()
+        => SetEnabled(LazyLoot.Config is { RollDiagnosticsLogging: true });
+
+    internal static void SetEnabled(bool enabled)
+    {
+        if (enabled) Enable();
+        else Disable();
+    }
+
+    /// <summary>目前是否正在記錄。指令與 UI 用來回報狀態。</summary>
+    internal static bool IsEnabled => _subscribed;
+
+    private static void Enable()
     {
         if (_subscribed) return;
 

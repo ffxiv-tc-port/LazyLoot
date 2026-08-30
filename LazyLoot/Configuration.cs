@@ -97,6 +97,11 @@ namespace LazyLoot
 
         //Diagnostics
         public bool DiagnosticsMode = false;
+        // 擲骰聊天診斷記錄（RollDiagnostics）。
+        // 🔴 預設關閉：開著時每一句 LogKind 57 系統訊息都會寫一行 Information，
+        //    實機一輪就是七萬多行，會把 log 洗掉。台服擲骰型別調查已收案，
+        //    只有要再次調查時才由使用者手動打開（設定頁或 /lazy diag on）。
+        public bool RollDiagnosticsLogging = false;
         public bool NoPassEmergency = false;
 
         public RestrictionGroup Restrictions { get; set; } = new();

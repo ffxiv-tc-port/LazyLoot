@@ -182,6 +182,17 @@ public class ConfigUi : Window, IDisposable
 
         ImGuiComponents.HelpMarker(
             "Normally LazyLoot will pass on items that fail to roll. Enabling this option will prevent it from passing in those situations. Be warned there could be weird side effects doing this and should only be used if you're running into issues with emergency passing appearing.".Loc());
+
+        // 🔴 這個開關預設關閉，而且刻意放在最後：開著時每一句系統訊息都會寫一行
+        //    Information 到 log，實機一輪就是七萬多行，只有要調查擲骰行為時才該開。
+        if (ImGui.Checkbox("Roll diagnostics logging".Loc(), ref LazyLoot.Config.RollDiagnosticsLogging))
+        {
+            LazyLoot.Config.Save();
+            RollDiagnostics.Refresh();
+        }
+
+        ImGuiComponents.HelpMarker(
+            "Writes every roll-related chat message into the Dalamud log, for investigating why LazyLoot did or did not roll. This is very noisy - it logs one line for every system message - so leave it off unless a developer asks for it. Can also be toggled with /lazy diag [on|off].".Loc());
     }
 
     public override void OnClose()
