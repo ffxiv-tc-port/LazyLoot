@@ -32,7 +32,7 @@ namespace LazyLoot;
 /// ⚠️ 判別**只用數值遮罩**（LogKind = 低 7 位元），不比對任何翻譯過的訊息文字 ——
 ///    台服的字串與國際服不同，用文字比對會靜默漏掉全部。
 ///
-/// 📌 一律寫 <c>Information</c> 等級：使用者跑 LogLevel 2，Debug/Verbose 收不到。
+/// 📌 一律寫 <c>Information</c> 等級：使用者跑 LogLevel 1，盲區只有 Verbose,Debug 收得到但單檔數十萬行會淹沒。
 /// 🔴 <b>預設關閉</b>：台服擲骰型別調查已收案，而 LogKind 57 是「系統訊息」大類，
 ///    開著時實機一輪就是七萬多行 Information，會把使用者的 log 洗到看不見別的東西。
 ///    要再次調查時由使用者自己打開（設定頁的「擲骰診斷記錄」或 <c>/lazy diag on</c>）。
