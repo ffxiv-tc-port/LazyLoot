@@ -12,6 +12,7 @@ using ECommons.LanguageHelpers;
 using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game.UI;
 using Lumina.Excel.Sheets;
+using Lumina.Text.ReadOnly;
 using PunishLib;
 using System;
 using System.Collections.Generic;
@@ -417,17 +418,35 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         // and LazyLoot never auto-rolled. The message-text comparison below is unique enough
         // on its own, so the chat-type gate is dropped rather than hardcoding TC's type value.
         if (!Config.FulfEnabled) return;
+
+        // 🔴 兩端剝 SeString 的實作必須是同一套。右邊是 Lumina 的 ReadOnlySeString,
+        // 直接拿 string 去比會走 ReadOnlySeString 的 implicit operator(string) 把左邊包回
+        // ReadOnlySeString,Equals 是 Data.SequenceEqual ⇒ 那是**原始位元組序列比對**,
+        // 句子裡只要有一個 payload(連字符、換行、自動翻譯)就恆為 false。
+        // 而 message.TextValue 本身又是第三套剝法(Dalamud 的 SeHyphenPayload 把 0x1F 吐成
+        // U+2013 的 en dash,Lumina 吐的是 U+002D 的 '-')。
+        // ⇒ 兩端一律先回到 Lumina 的 ExtractText() 再比字串。
+        var messageText = new ReadOnlySeStringSpan(message.Encode()).ExtractText();
+
         // do a few checks to see if the message is the weekly lockout message the game sends
-        if (CheckAndUpdateWeeklyLockoutDutyFlag(message)) return;
+        if (CheckAndUpdateWeeklyLockoutDutyFlag(messageText)) return;
         // if not Cast your lot, then just ignore
-        if (message.TextValue != Svc.Data.GetExcelSheet<LogMessage>().First(x => x.RowId == CastYourLotMessage).Text) return;
+        // 原為 First(x => x.RowId == CastYourLotMessage):那是對整張 LogMessage 表做線性
+        // 掃描找主鍵,而這條路徑是**每一則聊天訊息**都會走到。GetRowOrDefault 是索引查詢,
+        // 而且列不存在時回 null 而不是擲 InvalidOperationException。
+        var castYourLot = Svc.Data.GetExcelSheet<LogMessage>().GetRowOrDefault(CastYourLotMessage);
+        if (castYourLot == null || messageText != castYourLot.Value.Text.ExtractText()) return;
         _nextRollTime = DateTime.Now.AddMilliseconds(new Random()
             .Next((int)(Config.FulfMinRollDelayInSeconds * 1000),
                 (int)(Config.FulfMaxRollDelayInSeconds * 1000)));
         _rollOption = RollArray[Config.FulfRoll];
     }
 
-    private static bool CheckAndUpdateWeeklyLockoutDutyFlag(SeString message)
+    /// <summary>
+    /// <paramref name="messageText" /> 必須是呼叫端用 Lumina 的 ExtractText() 抽出來的文字
+    /// —— 下面要拿它跟 Lumina 的資料表欄位比,兩端的剝法不一致就會恆不相等。
+    /// </summary>
+    private static bool CheckAndUpdateWeeklyLockoutDutyFlag(string messageText)
     {
         if (!Config.RestrictionWeeklyLockoutItems || Config.WeeklyLockoutDutyActive)
             return false;
@@ -442,7 +461,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         if (weeklyLockoutMessage == null)
             return false;
 
-        if (message.TextValue != weeklyLockoutMessage.Value.Text) return false;
+        if (messageText != weeklyLockoutMessage.Value.Text.ExtractText()) return false;
 
         Config.WeeklyLockoutDutyActive = true;
         Config.WeeklyLockoutDutyTerritoryId = (ushort)Svc.ClientState.TerritoryType; //Casting this as to not fuck with configs
