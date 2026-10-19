@@ -3,9 +3,22 @@
 
 	<PropertyGroup>
 		<Authors>53m1k0l0n/Gidedin</Authors>
-		<Version>5.3.3.2</Version>
 		<Description>LazyLoot plugin.</Description>
 	</PropertyGroup>
+
+	<PropertyGroup>
+		<BuildNumberFile>$(MSBuildProjectDirectory)\BuildNumber.txt</BuildNumberFile>
+		<_PreviousBuildNumber Condition="Exists('$(BuildNumberFile)')">$([System.IO.File]::ReadAllText('$(BuildNumberFile)').Trim())</_PreviousBuildNumber>
+		<_PreviousBuildNumber Condition="'$(_PreviousBuildNumber)' == ''">0</_PreviousBuildNumber>
+		<BuildNumber>$([MSBuild]::Add($(_PreviousBuildNumber), 1))</BuildNumber>
+		<VersionPrefix>7.15.0</VersionPrefix>
+		<Version>$(VersionPrefix).$(BuildNumber)</Version>
+		<AssemblyVersion>$(Version)</AssemblyVersion>
+		<FileVersion>$(Version)</FileVersion>
+	</PropertyGroup>
+	<Target Name="PersistBuildNumber" AfterTargets="Build">
+		<WriteLinesToFile File="$(BuildNumberFile)" Lines="$(BuildNumber)" Overwrite="true" />
+	</Target>
 
 	<PropertyGroup>
 		<DalamudLibPath Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(appdata)\XIVLauncher\addon\Hooks\dev\</DalamudLibPath>
@@ -18,7 +31,7 @@
 		<RootNamespace>LazyLoot</RootNamespace>
 		<PackageId>LazyLoot</PackageId>
 		<Product>LazyLoot</Product>
-		<TargetFramework>net10.0-windows7.0</TargetFramework>
+		<TargetFramework>net9.0-windows7.0</TargetFramework>
 	</PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)' == 'Release'">
@@ -29,6 +42,7 @@
         <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
         <OutputPath>bin/Release</OutputPath>
         <NoWarn>CS1591</NoWarn>
     </PropertyGroup>
@@ -41,6 +55,7 @@
         <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <AppendPlatformToOutputPath>false</AppendPlatformToOutputPath>
         <OutputPath>$(DalamudDevPlugins)</OutputPath>
         <NoWarn>CS1591</NoWarn>
     </PropertyGroup>
@@ -48,11 +63,24 @@
 	
 	<ItemGroup>
 		<PackageReference Include="DalamudPackager" Version="14.0.2" />
-		<PackageReference Include="ECommons" Version="3.2.0" />
+		<!-- ECommons 走本 org 的 fork 子模組(BaseVersion 仍是 3.0.1.15,只換來源不換版本號)。
+		     公開 NuGet 的 3.0.1.10 沒有我們補的判空/加固,而 PunishLib 自己就宣告了那顆
+		     PackageReference,所以這裡不換來源的話出貨的會是未加固版。
+		     🔴 這裡是 ProjectReference 而不是 PackageReference:PunishLib 遞移宣告的
+		     ECommons NuGet 3.0.1.10 會被這個 ProjectReference 蓋掉。
+		     ✅ 2026-08-19 實證(不再是推測):Artisan 的出貨 DLL 與本 repo 建置後的
+		     bin/Release/ECommons.dll 都帶加固版獨有的 IsComponentEnabled 標記,
+		     且 obj/project.assets.json 的 ECommons 條目是 type=project。
+		     驗法 tools/fleet/ecommons_hardening_check.py。 -->
+		<ProjectReference Include="..\ECommons\ECommons\ECommons.csproj" />
 		<PackageReference Include="HtmlAgilityPack" Version="1.11.46" />
 		<ProjectReference Include="..\PunishLib\PunishLib\PunishLib.csproj" />
 		<Reference Include="FFXIVClientStructs">
 			<HintPath>$(DalamudLibPath)FFXIVClientStructs.dll</HintPath>
+			<Private>false</Private>
+		</Reference>
+		<Reference Include="InteropGenerator.Runtime">
+			<HintPath>$(DalamudLibPath)InteropGenerator.Runtime.dll</HintPath>
 			<Private>false</Private>
 		</Reference>
 		<Reference Include="Newtonsoft.Json">
@@ -86,5 +114,23 @@
         <None Update="LazyLoot.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </None>
+        <None Update="LanguageChineseTraditional.ini">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </None>
     </ItemGroup>
+
+    <ItemGroup>
+        <!-- 關於分頁讀的本地圖示。不可叫 images/icon.png：DalamudPackager 會把那個檔名從 latest.zip 剔除 -->
+        <Content Include="..\images\icon.png" Link="images\about-icon.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+	<!-- ECommons 的文件註解檔 ECommons.xml 執行期用不到：不複製進輸出目錄，出貨包也就不帶它（ECommons.pdb 照留，崩潰堆疊行號要用）。 -->
+	<Target Name="ExcludeECommonsXmlDoc" AfterTargets="ResolveAssemblyReferences">
+		<ItemGroup>
+			<_ECommonsXmlDoc Include="@(ReferenceCopyLocalPaths)" Condition="'%(Filename)%(Extension)' == 'ECommons.xml'" />
+			<ReferenceCopyLocalPaths Remove="@(_ECommonsXmlDoc)" />
+		</ItemGroup>
+	</Target>
 </Project>
