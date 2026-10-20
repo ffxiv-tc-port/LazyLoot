@@ -45,6 +45,8 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
     private const uint CastYourLotMessage = 5194;
     private const uint WeeklyLockoutMessage = 4234;
+    private static string? _castYourLotText, _weeklyLockoutText;
+    private static bool _castYourLotTextLoaded, _weeklyLockoutTextLoaded;
 
     // 艦隊急停：Action<string>，參數是呼叫端署名；與 BOCCHI.StopAll／HoardFarm.StopAll 同形。名字與型別是對外契約。
     private const string StopAllIpcName = "LazyLoot.StopAll";
@@ -503,14 +505,25 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         // do a few checks to see if the message is the weekly lockout message the game sends
         if (CheckAndUpdateWeeklyLockoutDutyFlag(messageText)) return;
         // if not Cast your lot, then just ignore
-        // GetRowOrDefault 是索引查詢(這條路徑是**每一則聊天訊息**都會走到,不可對整張表線性掃描),
-        // 而且列不存在時回 null 而不是擲 InvalidOperationException。
-        var castYourLot = Svc.Data.GetExcelSheet<LogMessage>().GetRowOrDefault(CastYourLotMessage);
-        if (castYourLot == null || messageText != castYourLot.Value.Text.ExtractText()) return;
+        var castYourLotText = LogMessageText(CastYourLotMessage, ref _castYourLotText, ref _castYourLotTextLoaded);
+        if (castYourLotText == null || messageText != castYourLotText) return;
         _nextRollTime = DateTime.Now.AddMilliseconds(new Random()
             .Next((int)(Config.FulfMinRollDelayInSeconds * 1000),
                 (int)(Config.FulfMaxRollDelayInSeconds * 1000)));
         _rollOption = RollArray[Config.FulfRoll];
+    }
+
+    // 列文字本次遊戲內不變（資料語言不能中途切換）⇒ 第一次用到才抽、之後每則聊天只比字串；null＝該列不存在。
+    // GetRowOrDefault 是索引查詢(不可對整張表線性掃描),而且列不存在時回 null 而不是擲 InvalidOperationException。
+    private static string? LogMessageText(uint rowId, ref string? cache, ref bool loaded)
+    {
+        if (!loaded)
+        {
+            cache = Svc.Data.GetExcelSheet<LogMessage>().GetRowOrDefault(rowId)?.Text.ExtractText();
+            loaded = true;
+        }
+
+        return cache;
     }
 
     /// <summary>
@@ -528,11 +541,11 @@ public class LazyLoot : IDalamudPlugin, IDisposable
             return false;
         }
 
-        var weeklyLockoutMessage = Svc.Data.GetExcelSheet<LogMessage>().GetRowOrDefault(WeeklyLockoutMessage);
-        if (weeklyLockoutMessage == null)
+        var weeklyLockoutText = LogMessageText(WeeklyLockoutMessage, ref _weeklyLockoutText, ref _weeklyLockoutTextLoaded);
+        if (weeklyLockoutText == null)
             return false;
 
-        if (messageText != weeklyLockoutMessage.Value.Text.ExtractText()) return false;
+        if (messageText != weeklyLockoutText) return false;
 
         Config.WeeklyLockoutDutyActive = true;
         Config.WeeklyLockoutDutyTerritoryId = (ushort)Svc.ClientState.TerritoryType; //Casting this as to not fuck with configs
