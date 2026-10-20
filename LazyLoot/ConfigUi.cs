@@ -437,8 +437,8 @@ public class ConfigUi : Window, IDisposable
             {
                 ImGuiEx.TextCentered("No items added.".Loc());
                 ImGuiEx.TextCentered("Click the Add item below to start adding items.".Loc());
-                ImGui.EndChild();
             }
+            ImGui.EndChild();
 
             ImGui.PopStyleVar();
             ImGui.Dummy(new Vector2(0, 6));
@@ -727,8 +727,8 @@ public class ConfigUi : Window, IDisposable
             {
                 ImGuiEx.TextCentered("No duties added.".Loc());
                 ImGuiEx.TextCentered("Click the Add duty below to start adding duties.".Loc());
-                ImGui.EndChild();
             }
+            ImGui.EndChild();
 
             ImGui.PopStyleVar();
             ImGui.Dummy(new Vector2(0, 6));
