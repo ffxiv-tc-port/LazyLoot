@@ -29,6 +29,13 @@ public unsafe class LootButtonsUi : Window, IDisposable
     private Vector2 _position;
     private Vector2 _size;
 
+    // Full "Loc text###id" labels, rebuilt only when Localization.CurrentLanguage changes (ECommons has no change event).
+    private bool _labelsBuilt;
+    private string? _labelsLanguage;
+    private string _needLabel = "";
+    private string _greedLabel = "";
+    private string _passLabel = "";
+
     public LootButtonsUi() : base("###LazyLootLootButtons",
         ImGuiWindowFlags.NoTitleBar | ImGuiWindowFlags.NoResize | ImGuiWindowFlags.NoMove |
         ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse |
@@ -102,13 +109,26 @@ public unsafe class LootButtonsUi : Window, IDisposable
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, ButtonHoveredColor);
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, ButtonActiveColor);
 
-        DrawRollButton("Need All".Loc() + "###LazyLootNeedAll", RollResult.Needed, buttonSize, "Same as /lazy need: roll need on everything, greed (or pass) where need is impossible. Your restrictions still apply.".Loc());
+        EnsureLabels();
+        DrawRollButton(_needLabel, RollResult.Needed, buttonSize, "Same as /lazy need: roll need on everything, greed (or pass) where need is impossible. Your restrictions still apply.".Loc());
         ImGui.SameLine();
-        DrawRollButton("Greed All".Loc() + "###LazyLootGreedAll", RollResult.Greeded, buttonSize, "Same as /lazy greed: roll greed on everything, pass where greed is impossible. Your restrictions still apply.".Loc());
+        DrawRollButton(_greedLabel, RollResult.Greeded, buttonSize, "Same as /lazy greed: roll greed on everything, pass where greed is impossible. Your restrictions still apply.".Loc());
         ImGui.SameLine();
-        DrawRollButton("Pass All".Loc() + "###LazyLootPassAll", RollResult.Passed, buttonSize, "Same as /lazy pass: pass on everything you haven't rolled for yet.".Loc());
+        DrawRollButton(_passLabel, RollResult.Passed, buttonSize, "Same as /lazy pass: pass on everything you haven't rolled for yet.".Loc());
 
         ImGui.PopStyleColor(3);
+    }
+
+    private void EnsureLabels()
+    {
+        var language = Localization.CurrentLanguage;
+        if (_labelsBuilt && string.Equals(_labelsLanguage, language, StringComparison.Ordinal)) return;
+
+        _needLabel = "Need All".Loc() + "###LazyLootNeedAll";
+        _greedLabel = "Greed All".Loc() + "###LazyLootGreedAll";
+        _passLabel = "Pass All".Loc() + "###LazyLootPassAll";
+        _labelsLanguage = language;
+        _labelsBuilt = true;
     }
 
     private static void DrawRollButton(string label, RollResult result, Vector2 size, string tooltip)
