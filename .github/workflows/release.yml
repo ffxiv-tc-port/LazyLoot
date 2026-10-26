@@ -101,3 +101,4 @@ jobs:
             LazyLoot.zip
             LazyLoot/bin/Release/LazyLoot.json
           generate_release_notes: true
+# workflow re-registration trigger 2026-10-26T18:11:47Z
