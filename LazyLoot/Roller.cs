@@ -39,6 +39,7 @@ internal static class Roller
             : ResultMerge(option, GetRestrictResult(loot),
                 GetPlayerRestrictByItemId(loot.ItemId, loot.RollState == RollState.UpToNeed));
 
+        var emergencyPass = false;
         if (_itemId == loot.ItemId && index == _index)
         {
             if (LazyLoot.Config.DiagnosticsMode && !LazyLoot.Config.NoPassEmergency)
@@ -61,10 +62,17 @@ internal static class Roller
                 }
 
                 option = RollResult.Passed;
+                emergencyPass = true;
             }
         }
 
-        RollItem(option, index);
+        var nativeResult = RollItem(option, index);
+        // 要使用者回報的診斷：一件一行（兩件之間至少 1.5 秒），用來對帳 LootItem 的位移與擲骰函式是否被呼叫到。
+        Svc.Log.Information(
+            $"[LazyLoot] 擲骰：物品 {loot.ItemId}（{Svc.Data.GetExcelSheet<Item>().GetRowOrDefault(loot.ItemId)?.Name.ToString() ?? "?"}）"
+            + $" 格 {index} RollState={loot.RollState}({(byte)loot.RollState}) LootMode={loot.LootMode}({(int)loot.LootMode})"
+            + $" weekly={loot.WeeklyLootItem} 選擇={option} 緊急放棄={emergencyPass}"
+            + $" 原生回傳={(nativeResult is { } r ? r.ToString() : "未呼叫")}");
         _itemId = loot.ItemId;
         _index = index;
 
@@ -507,7 +515,8 @@ internal static class Roller
         return false;
     }
 
-    private static unsafe void RollItem(RollResult option, uint index)
+    // 回傳擲骰函式的原值（只記進 log、不判成敗）；null＝函式解不到或擲例外，這次沒有呼叫到。
+    private static unsafe bool? RollItem(RollResult option, uint index)
     {
         try
         {
@@ -518,11 +527,12 @@ internal static class Roller
             _rollItemRaw ??=
                 Marshal.GetDelegateForFunctionPointer<RollItemRaw>(
                     Svc.SigScanner.ScanText("41 83 F8 ?? 0F 83 ?? ?? ?? ?? 48 89 5C 24 08 48 89 74 24 10 57 48 81 EC 80 0F 00 00"));
-            _rollItemRaw?.Invoke(Loot.Instance(), option, index);
+            return _rollItemRaw?.Invoke(Loot.Instance(), option, index);
         }
         catch (Exception ex)
         {
             Svc.Log.Warning(ex, "Warning at roll");
+            return null;
         }
     }
 
