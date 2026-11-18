@@ -45,8 +45,11 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
     private const uint CastYourLotMessage = 5194;
     private const uint WeeklyLockoutMessage = 4234;
-    private static string? _castYourLotText, _weeklyLockoutText;
-    private static bool _castYourLotTextLoaded, _weeklyLockoutTextLoaded;
+    // 聊天型別的低 7 位元是 LogKind，其餘位元是來源／目標（Dalamud 傳進來的是未遮罩的原始值）。
+    private const int LogKindMask = 0x7F;
+    private readonly record struct LogMessageRow(string Text, int LogKind);
+    private static LogMessageRow? _castYourLotRow, _weeklyLockoutRow;
+    private static bool _castYourLotRowLoaded, _weeklyLockoutRowLoaded;
 
     // 艦隊急停：Action<string>，參數是呼叫端署名；與 BOCCHI.StopAll／HoardFarm.StopAll 同形。名字與型別是對外契約。
     private const string StopAllIpcName = "LazyLoot.StopAll";
@@ -489,12 +492,16 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         //    所以「等級關著就免費」不成立。共用「擲骰診斷記錄」這個開關，要調查時一起開。
         if (Config.RollDiagnosticsLogging)
             Svc.Log.Debug($"{type} {message}");
-        // TC note: the "cast your lot" roll prompt arrives as a different, undocumented
-        // chat type on TC (observed as raw type 2105 in logs, not XivChatType.SystemMessage
-        // like on global) - matching purely on chat type silently dropped every roll prompt
-        // and LazyLoot never auto-rolled. The message-text comparison below is unique enough
-        // on its own, so the chat-type gate is dropped rather than hardcoding TC's type value.
         if (!Config.FulfEnabled) return;
+
+        // 遊戲送 LogMessage 列時以該列的 LogKind 當聊天型別低 7 位（擲骰提示實測原始型別 2105＝0x800|57）
+        // ⇒ 型別對不上的訊息不可能是這兩句，不必整則編碼。LogKind 從表讀、不寫死，比對前必須先遮罩。
+        var logKind = (int)type & LogKindMask;
+        var castYourLot = LoadLogMessage(CastYourLotMessage, ref _castYourLotRow, ref _castYourLotRowLoaded);
+        var weeklyLockout = LoadLogMessage(WeeklyLockoutMessage, ref _weeklyLockoutRow, ref _weeklyLockoutRowLoaded);
+        var maybeCastYourLot = castYourLot?.LogKind == logKind;
+        var maybeWeeklyLockout = weeklyLockout?.LogKind == logKind;
+        if (!maybeCastYourLot && !maybeWeeklyLockout) return;
 
         // 🔴 兩端剝 SeString 的實作必須是同一套。右邊是 Lumina 的 ReadOnlySeString,
         // 直接拿 string 去比會變成原始位元組序列比對,句子裡只要有一個 payload(連字符、換行、自動翻譯)就恆為 false;
@@ -503,10 +510,9 @@ public class LazyLoot : IDalamudPlugin, IDisposable
         var messageText = new ReadOnlySeStringSpan(message.Encode()).ExtractText();
 
         // do a few checks to see if the message is the weekly lockout message the game sends
-        if (CheckAndUpdateWeeklyLockoutDutyFlag(messageText)) return;
+        if (maybeWeeklyLockout && CheckAndUpdateWeeklyLockoutDutyFlag(messageText)) return;
         // if not Cast your lot, then just ignore
-        var castYourLotText = LogMessageText(CastYourLotMessage, ref _castYourLotText, ref _castYourLotTextLoaded);
-        if (castYourLotText == null || messageText != castYourLotText) return;
+        if (!maybeCastYourLot || messageText != castYourLot!.Value.Text) return;
         _nextRollTime = DateTime.Now.AddMilliseconds(new Random()
             .Next((int)(Config.FulfMinRollDelayInSeconds * 1000),
                 (int)(Config.FulfMaxRollDelayInSeconds * 1000)));
@@ -515,11 +521,12 @@ public class LazyLoot : IDalamudPlugin, IDisposable
 
     // 列文字本次遊戲內不變（資料語言不能中途切換）⇒ 第一次用到才抽、之後每則聊天只比字串；null＝該列不存在。
     // GetRowOrDefault 是索引查詢(不可對整張表線性掃描),而且列不存在時回 null 而不是擲 InvalidOperationException。
-    private static string? LogMessageText(uint rowId, ref string? cache, ref bool loaded)
+    private static LogMessageRow? LoadLogMessage(uint rowId, ref LogMessageRow? cache, ref bool loaded)
     {
         if (!loaded)
         {
-            cache = Svc.Data.GetExcelSheet<LogMessage>().GetRowOrDefault(rowId)?.Text.ExtractText();
+            var row = Svc.Data.GetExcelSheet<LogMessage>().GetRowOrDefault(rowId);
+            cache = row is { } r ? new LogMessageRow(r.Text.ExtractText(), (int)r.LogKind.RowId) : null;
             loaded = true;
         }
 
@@ -541,7 +548,7 @@ public class LazyLoot : IDalamudPlugin, IDisposable
             return false;
         }
 
-        var weeklyLockoutText = LogMessageText(WeeklyLockoutMessage, ref _weeklyLockoutText, ref _weeklyLockoutTextLoaded);
+        var weeklyLockoutText = LoadLogMessage(WeeklyLockoutMessage, ref _weeklyLockoutRow, ref _weeklyLockoutRowLoaded)?.Text;
         if (weeklyLockoutText == null)
             return false;
 
