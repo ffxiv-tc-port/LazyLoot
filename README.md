@@ -20,8 +20,10 @@
 - 擲骰診斷記錄改為預設關閉。
 - 擲骰用語對齊台服官方（需求／貪婪／放棄）；介面與伺服器資訊列繁體中文化。
 
-## 授權
+## 安裝
 
-依照原專案授權條款發布，詳見 [LICENSE](LICENSE)。
+`/xlsettings` 開「Dalamud 設定」→「試驗性功能」→「第三方插件倉庫」，加入 `https://raw.githubusercontent.com/ffxiv-tc-port/DalamudPluginsTC/main/repo.json` 並啟用、儲存，再到「插件管理員」（`/xlplugins`）安裝；同一個插件只裝這裡的版本，不要同時裝上游版。
 
 原作者：[PunishXIV/LazyLoot](https://github.com/PunishXIV/LazyLoot)
+
+授權：GPL-3.0（見 LICENSE）
